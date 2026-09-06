@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Manpower Intimation Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --navy:#1F3864;
+    --lightblue:#DCE6F1;
+    --grey:#F2F2F2;
+    --gold:#FFF2CC;
+    --border:#B0B0B0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family: Arial, Helvetica, sans-serif;
+    background:#e9edf2;
+    margin:0;
+    padding:24px;
+    color:#222;
+  }
+  .toolbar{
+    max-width:1100px;
+    margin:0 auto 16px auto;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    justify-content:space-between;
+    background:#fff;
+    padding:14px 18px;
+    border-radius:8px;
+    box-shadow:0 1px 4px rgba(0,0,0,0.12);
+  }
+  .toolbar .left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .toolbar label{font-weight:bold;font-size:14px;}
+  .toolbar input[type=date]{
+    font-size:15px;
+    font-weight:bold;
+    color:#CC0000;
+    background:var(--gold);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:6px 8px;
+  }
+  .btn{
+    border:none;
+    border-radius:4px;
+    padding:9px 16px;
+    font-size:13px;
+    font-weight:bold;
+    color:#fff;
+    cursor:pointer;
+    transition:opacity .15s;
+  }
+  .btn:hover{opacity:.87;}
+  .btn-jpg{background:#2E7D32;}
+  .btn-pdf{background:#C62828;}
+  .btn-xlsx{background:#1565C0;}
+  .hint{
+    max-width:1100px;
+    margin:0 auto 14px auto;
+    font-size:12px;
+    color:#666;
+    font-style:italic;
+  }
+
+  #report{
+    max-width:1100px;
+    margin:0 auto;
+    background:#fff;
+    padding:18px 22px 26px 22px;
+    border-radius:6px;
+    box-shadow:0 1px 6px rgba(0,0,0,0.15);
+  }
+  .title-bar{
+    background:var(--navy);
+    color:#fff;
+    text-align:center;
+    font-size:22px;
+    font-weight:bold;
+    padding:12px 8px;
+    border-radius:4px 4px 0 0;
+    letter-spacing:.5px;
+  }
+  .subtitle{
+    text-align:center;
+    font-size:15px;
+    font-weight:bold;
+    font-style:italic;
+    color:var(--navy);
+    padding:10px 4px 4px 4px;
+  }
+  .meta-row{
+    display:flex;
+    justify-content:center;
+    gap:26px;
+    font-size:13px;
+    color:#444;
+    padding-bottom:10px;
+  }
+  .meta-row b{color:#222;}
+
+  table.qv{
+    width:100%;
+    border-collapse:collapse;
+    margin:10px 0 18px 0;
+    table-layout:fixed;
+  }
+  table.qv th{
+    background:var(--navy);
+    color:#fff;
+    font-size:12px;
+    padding:6px 4px;
+    border:1px solid var(--border);
+  }
+  table.qv td{
+    text-align:center;
+    font-weight:bold;
+    font-size:15px;
+    background:var(--lightblue);
+    border:1px solid var(--border);
+    padding:8px 4px;
+    outline:none;
+  }
+
+  table.grid{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+  }
+  table.grid th{
+    background:var(--navy);
+    color:#fff;
+    font-size:12px;
+    padding:8px 4px;
+    border:1px solid var(--border);
+    text-align:center;
+  }
+  table.grid td{
+    border:1px solid var(--border);
+    vertical-align:top;
+    padding:8px;
+    font-size:12px;
+    line-height:1.5;
+    min-height:90px;
+    outline:none;
+  }
+  table.grid td.loc{
+    background:var(--lightblue);
+    font-weight:bold;
+    font-size:12.5px;
+  }
+  table.grid td.cell{
+    background:#fff;
+  }
+  table.grid td.cell .line{margin-bottom:6px;}
+  table.grid td.cell .desig{color:#555;font-size:11px;}
+  table.grid tr.total td{
+    background:var(--navy);
+    color:#fff;
+    font-weight:bold;
+    text-align:center;
+  }
+  .footnote{
+    font-size:11px;
+    font-style:italic;
+    color:#888;
+    text-align:center;
+    padding-top:12px;
+  }
+  [contenteditable="true"]:hover{
+    background:#fffde7;
+    cursor:text;
+  }
+  @media (max-width:760px){
+    .toolbar{flex-direction:column;align-items:stretch;}
+    table.grid{table-layout:auto;}
+  }
+</style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <div class="left">
+      <label for="datePick">SELECT DATE:</label>
+      <input type="date" id="datePick" min="2026-09-01" max="2026-12-31" value="2026-09-04">
+      <span id="dayLabel" style="font-size:13px;color:#444;"></span>
+    </div>
+    <div class="right" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-jpg" onclick="downloadJPG()">⬇ Download JPG</button>
+      <button class="btn btn-pdf" onclick="downloadPDF()">⬇ Download PDF</button>
+      <button class="btn btn-xlsx" onclick="downloadXLSX()">⬇ Download Excel</button>
+    </div>
+  </div>
+  <div class="hint">Any name / designation / total in the report below can be clicked and edited directly before you export it (e.g. to add a last-minute change). Editing here does not change the source roster data.</div>
+
+  <div id="report">
+    <div class="title-bar" contenteditable="true">MANPOWER INTIMATION</div>
+    <div class="subtitle" id="subtitleLine">PLANNED MANPOWER DEPLOYMENT&nbsp;&nbsp;|&nbsp;&nbsp;DATE: 04/09/2026 (Friday)</div>
+
+    <table class="qv" id="qvTable">
+      <colgroup>
+        <col style="width:16%;">
+        <col><col><col><col><col>
+      </colgroup>
+      <tr>
+        <th>TOTAL</th><th>SHIFT A</th><th>SHIFT B</th><th>SHIFT C</th><th>G.S</th><th>OFF / REST</th>
+      </tr>
+      <tr>
+        <td contenteditable="true" id="qvTOTAL">0</td>
+        <td contenteditable="true" id="qvA">0</td>
+        <td contenteditable="true" id="qvB">0</td>
+        <td contenteditable="true" id="qvC">0</td>
+        <td contenteditable="true" id="qvG">0</td>
+        <td contenteditable="true" id="qvOFF">0</td>
+      </tr>
+    </table>
+
+    <table class="grid" id="gridTable">
+      <colgroup>
+        <col style="width:16%;">
+        <col><col><col><col><col>
+      </colgroup>
+      <thead>
+        <tr>
+          <th>DEPLOYMENT LOCATION</th>
+          <th>SHIFT A<br><span style="font-weight:normal;">(06:00-14:00)</span></th>
+          <th>SHIFT B<br><span style="font-weight:normal;">(14:00-22:00)</span></th>
+          <th>SHIFT C<br><span style="font-weight:normal;">(22:00-06:00)</span></th>
+          <th>G.S<br><span style="font-weight:normal;">(General Shift)</span></th>
+          <th>OFF / REST</th>
+        </tr>
+      </thead>
+      <tbody id="gridBody">
+        <!-- filled by JS -->
+      </tbody>
+      <tfoot>
+        <tr class="total">
+          <td>TOTAL MANPOWER</td>
+          <td contenteditable="true" id="totA">0</td>
+          <td contenteditable="true" id="totB">0</td>
+          <td contenteditable="true" id="totC">0</td>
+          <td contenteditable="true" id="totG">0</td>
+          <td contenteditable="true" id="totOFF">0</td>
+        </tr>
+      </tfoot>
+    </table>
+
+  </div>
+
+<script>
+const EMPLOYEES = [{"so": 1, "loc": "MINES", "name": "Rahul Kumar", "id": "1000091", "desig": "ET (Mining)"}, {"so": 2, "loc": "MINES", "name": "Rahul Kr.", "id": "1000081", "desig": "ET (Mining)"}, {"so": 3, "loc": "MINES", "name": "P. Amar Rathod", "id": "1000082", "desig": "ET (Mining)"}, {"so": 4, "loc": "MINES", "name": "Prasanjeet Kumar", "id": "1000080", "desig": "ET (Mining)"}, {"so": 5, "loc": "MINES", "name": "Ashutosh Tiwari", "id": "2000016", "desig": "Overman"}, {"so": 6, "loc": "MINES", "name": "Mukesh Mandal", "id": "2000008", "desig": "Overman"}, {"so": 7, "loc": "MINES", "name": "Saurabh Kumar mishra", "id": "594321", "desig": "Overman"}, {"so": 8, "loc": "MINES", "name": "Ajitabh Kumar", "id": "594297", "desig": "Overman"}, {"so": 9, "loc": "MINES", "name": "Ujjwal Kumar Swarnkar", "id": "2000009", "desig": "Overman"}, {"so": 10, "loc": "MINES", "name": "Ranjeet Mandal", "id": "2000015", "desig": "Overman"}, {"so": 11, "loc": "MINES", "name": "Anil Thakur", "id": "2000014", "desig": "Overman"}, {"so": 12, "loc": "MINES", "name": "Sandip Karmakar", "id": "2000013", "desig": "Overman"}, {"so": 13, "loc": "COAL YARD", "name": "Rathlal", "id": "342060", "desig": "Pump Opr. Cat. III"}, {"so": 14, "loc": "COAL YARD", "name": "Roshan Dome", "id": "342068", "desig": "Helper (Elect.) Cat IV"}, {"so": 15, "loc": "COAL YARD", "name": "Mustak Alam", "id": "340303", "desig": "Bill Clerk Gr. I"}, {"so": 16, "loc": "COAL YARD", "name": "Jagdish", "id": "342066", "desig": "Drill Operator"}, {"so": 17, "loc": "WEIGHBRIDGE", "name": "Bhola Kumar", "id": "340099", "desig": "Weigh Bridge Clerk Spl. Gr."}, {"so": 18, "loc": "WEIGHBRIDGE", "name": "Ajay Kr. Chaudhary", "id": "541176", "desig": "Asstt. Controller (M)"}, {"so": 19, "loc": "WEIGHBRIDGE", "name": "Dhirendra Kumar", "id": "398128", "desig": "Asstt. Controller (M) PG"}, {"so": 20, "loc": "WEIGHBRIDGE", "name": "Bijay Kumar Prasad", "id": "225088", "desig": "Chargehand (CHP) PG"}, {"so": 21, "loc": "WEIGHBRIDGE", "name": "Ranjan Kumar Singh", "id": "315303", "desig": "Asstt. Controller (M) PG"}, {"so": 22, "loc": "WEIGHBRIDGE", "name": "Jitendra Kumar Rajak", "id": "504106", "desig": "Asstt. Controller (M) PG"}, {"so": 23, "loc": "WEIGHBRIDGE", "name": "Sunil Kumar", "id": "548251", "desig": "Technician Gr. I (CHP)"}, {"so": 24, "loc": "WEIGHBRIDGE", "name": "Sanjay Kumar", "id": "340304", "desig": "Weigh Bridge Clerk Gr. I"}, {"so": 25, "loc": "WEIGHBRIDGE", "name": "Shashi Sekhar Mishra", "id": "312398", "desig": "Asstt. Controller (M) PG"}, {"so": 26, "loc": "WEIGHBRIDGE", "name": "Bipin Kumar Chanchal", "id": "504068", "desig": "Asstt. Controller (M) PG"}, {"so": 27, "loc": "WEIGHBRIDGE", "name": "Kameshwar Ram", "id": "522678", "desig": "Asstt. Controller (M)"}, {"so": 28, "loc": "SIDING (Biratoli & Kusmahi)", "name": "Birendra Kumar Pandey", "id": "522198", "desig": "Technician Gr. I (Welder)"}, {"so": 29, "loc": "SIDING (Biratoli & Kusmahi)", "name": "Manoj Rawani", "id": "342081", "desig": "Helper Electrical"}, {"so": 30, "loc": "SIDING (Biratoli & Kusmahi)", "name": "Manoj Kumar", "id": "504939", "desig": "Asstt. Controller (M) PG"}, {"so": 31, "loc": "SIDING (Biratoli & Kusmahi)", "name": "Rabindra Kumar Sharma", "id": "324752", "desig": "Chargehand (Machine Operator)"}, {"so": 32, "loc": "SIDING (Biratoli & Kusmahi)", "name": "Md. Anwar Hussain", "id": "548243", "desig": "Technician Gr. I (CHP)"}, {"so": 33, "loc": "SIDING (Biratoli & Kusmahi)", "name": "Dinesh Kumar", "id": "342072", "desig": "Fitter Electrical"}, {"so": 34, "loc": "SIDING (Biratoli & Kusmahi)", "name": "Prabash Chandra Mondal", "id": "314625", "desig": "Chargehand (Welder) PG"}, {"so": 35, "loc": "SIDING (Biratoli & Kusmahi)", "name": "Kuljit Kumar", "id": "522767", "desig": "Asstt. Controller (M)"}, {"so": 36, "loc": "MINES", "name": "Santosh Verma", "id": "2000011", "desig": "Overman (FTE) - Mining Operation"}, {"so": 37, "loc": "MINES", "name": "Kapoor Kumar Saw", "id": "2000022", "desig": "Overman (FTE) - Mining Operation"}, {"so": 38, "loc": "MINES", "name": "Shashi Ranjan Gupta", "id": "594281", "desig": "Overman (FTE) - Blasting Operation"}, {"so": 39, "loc": "MINES", "name": "Amar Kumar Sidarth", "id": "2000010", "desig": "Overman (FTE) - Blasting Operation"}];
+const SHIFTS_BY_DATE = {"2026-09-01": ["C", "A", "B", "G.S", "B", "OFF", "A", "C", "C", "A", "C", "B", "C", "A", "B", "G.S", "OFF", "A", "A", "C", "B", "B", "OFF", "C", "A", "B", "A", "OFF", "A", "A", "A", "OFF", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-09-02": ["OFF", "A", "B", "C", "B", "A", "A", "OFF", "C", "A", "C", "B", "OFF", "A", "B", "C", "B", "OFF", "A", "C", "OFF", "B", "A", "C", "A", "B", "A", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-09-03": ["B", "A", "OFF", "C", "B", "A", "A", "B", "C", "OFF", "C", "B", "B", "A", "OFF", "C", "B", "B", "OFF", "C", "C", "OFF", "A", "C", "A", "B", "A", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-09-04": ["B", "OFF", "A", "C", "B", "A", "A", "B", "C", "C", "OFF", "B", "B", "OFF", "A", "C", "B", "B", "B", "C", "C", "C", "A", "C", "A", "OFF", "A", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-09-05": ["B", "C", "A", "OFF", "OFF", "A", "A", "B", "C", "C", "B", "B", "B", "C", "A", "OFF", "B", "B", "B", "C", "C", "C", "A", "OFF", "A", "C", "A", "A", "A", "A", "OFF", "B", "B", "B", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-09-06": ["B", "C", "A", "G.S", "A", "A", "OFF", "B", "C", "C", "B", "B", "B", "C", "A", "G.S", "B", "B", "B", "OFF", "C", "C", "A", "A", "A", "C", "A", "A", "A", "OFF", "B", "B", "B", "OFF", "A", "OFF", "OFF", "OFF", "OFF"], "2026-09-07": ["B", "C", "A", "G.S", "A", "A", "C", "B", "OFF", "C", "B", "OFF", "B", "C", "A", "G.S", "B", "B", "B", "A", "C", "C", "A", "A", "OFF", "C", "OFF", "A", "OFF", "B", "B", "B", "OFF", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-09-08": ["B", "C", "A", "G.S", "A", "OFF", "C", "B", "B", "C", "B", "A", "B", "C", "A", "G.S", "OFF", "B", "B", "A", "C", "C", "OFF", "A", "B", "C", "B", "OFF", "B", "B", "B", "OFF", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-09-09": ["OFF", "C", "A", "B", "A", "C", "C", "OFF", "B", "C", "B", "A", "OFF", "C", "A", "B", "C", "OFF", "B", "A", "OFF", "C", "B", "A", "B", "C", "B", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-09-10": ["A", "C", "OFF", "B", "A", "C", "C", "A", "B", "OFF", "B", "A", "A", "C", "OFF", "B", "C", "C", "OFF", "A", "A", "OFF", "B", "A", "B", "C", "B", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-09-11": ["A", "OFF", "C", "B", "A", "C", "C", "A", "B", "B", "OFF", "A", "A", "OFF", "C", "B", "C", "C", "C", "A", "A", "A", "B", "A", "B", "OFF", "B", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-09-12": ["A", "B", "C", "OFF", "OFF", "C", "C", "A", "B", "B", "A", "A", "A", "B", "C", "OFF", "C", "C", "C", "A", "A", "A", "B", "OFF", "B", "A", "B", "B", "B", "B", "OFF", "A", "A", "A", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-09-13": ["A", "B", "C", "G.S", "C", "C", "OFF", "A", "B", "B", "A", "A", "A", "B", "C", "G.S", "C", "C", "C", "OFF", "A", "A", "B", "B", "B", "A", "B", "B", "B", "OFF", "A", "A", "A", "OFF", "B", "OFF", "OFF", "OFF", "OFF"], "2026-09-14": ["A", "B", "C", "G.S", "C", "C", "B", "A", "OFF", "B", "A", "OFF", "A", "B", "C", "G.S", "C", "C", "C", "B", "A", "A", "B", "B", "OFF", "A", "OFF", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-09-15": ["A", "B", "C", "G.S", "C", "OFF", "B", "A", "A", "B", "A", "C", "A", "B", "C", "G.S", "OFF", "C", "C", "B", "A", "A", "OFF", "B", "C", "A", "C", "OFF", "A", "A", "A", "OFF", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-09-16": ["OFF", "B", "C", "A", "C", "B", "B", "OFF", "A", "B", "A", "C", "OFF", "B", "C", "A", "A", "OFF", "C", "B", "OFF", "A", "C", "B", "C", "A", "C", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-09-17": ["C", "B", "OFF", "A", "C", "B", "B", "C", "A", "OFF", "A", "C", "C", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "OFF", "C", "B", "C", "A", "C", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-09-18": ["C", "OFF", "B", "A", "C", "B", "B", "C", "A", "A", "OFF", "C", "C", "OFF", "B", "A", "A", "A", "A", "B", "B", "B", "C", "B", "C", "OFF", "C", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-09-19": ["C", "A", "B", "OFF", "OFF", "B", "B", "C", "A", "A", "C", "C", "C", "A", "B", "OFF", "A", "A", "A", "B", "B", "B", "C", "OFF", "C", "B", "C", "A", "A", "A", "OFF", "B", "B", "B", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-09-20": ["C", "A", "B", "G.S", "B", "B", "OFF", "C", "A", "A", "C", "C", "C", "A", "B", "G.S", "A", "A", "A", "OFF", "B", "B", "C", "C", "C", "B", "C", "A", "A", "OFF", "B", "B", "B", "OFF", "A", "OFF", "OFF", "OFF", "OFF"], "2026-09-21": ["C", "A", "B", "G.S", "B", "B", "A", "C", "OFF", "A", "C", "OFF", "C", "A", "B", "G.S", "A", "A", "A", "C", "B", "B", "C", "C", "OFF", "B", "OFF", "A", "OFF", "B", "B", "B", "OFF", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-09-22": ["C", "A", "B", "G.S", "B", "OFF", "A", "C", "C", "A", "C", "B", "C", "A", "B", "G.S", "OFF", "A", "A", "C", "B", "B", "OFF", "C", "A", "B", "A", "OFF", "B", "B", "B", "OFF", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-09-23": ["OFF", "A", "B", "C", "B", "A", "A", "OFF", "C", "A", "C", "B", "OFF", "A", "B", "C", "B", "OFF", "A", "C", "OFF", "B", "A", "C", "A", "B", "A", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-09-24": ["B", "A", "OFF", "C", "B", "A", "A", "B", "C", "OFF", "C", "B", "B", "A", "OFF", "C", "B", "B", "OFF", "C", "C", "OFF", "A", "C", "A", "B", "A", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-09-25": ["B", "OFF", "A", "C", "B", "A", "A", "B", "C", "C", "OFF", "B", "B", "OFF", "A", "C", "B", "B", "B", "C", "C", "C", "A", "C", "A", "OFF", "A", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-09-26": ["B", "C", "A", "OFF", "OFF", "A", "A", "B", "C", "C", "B", "B", "B", "C", "A", "OFF", "B", "B", "B", "C", "C", "C", "A", "OFF", "A", "C", "A", "B", "B", "B", "OFF", "A", "A", "A", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-09-27": ["B", "C", "A", "G.S", "A", "A", "OFF", "B", "C", "C", "B", "B", "B", "C", "A", "G.S", "B", "B", "B", "OFF", "C", "C", "A", "A", "A", "C", "A", "B", "B", "OFF", "A", "A", "A", "OFF", "B", "OFF", "OFF", "OFF", "OFF"], "2026-09-28": ["B", "C", "A", "G.S", "A", "A", "C", "B", "OFF", "C", "B", "OFF", "B", "C", "A", "G.S", "B", "B", "B", "A", "C", "C", "A", "A", "OFF", "C", "OFF", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-09-29": ["B", "C", "A", "G.S", "A", "OFF", "C", "B", "B", "C", "B", "A", "B", "C", "A", "G.S", "OFF", "B", "B", "A", "C", "C", "OFF", "A", "B", "C", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-09-30": ["OFF", "C", "A", "B", "A", "C", "C", "OFF", "B", "C", "B", "A", "OFF", "C", "A", "B", "C", "OFF", "B", "A", "OFF", "C", "B", "A", "B", "C", "B", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-01": ["A", "C", "OFF", "B", "A", "C", "C", "A", "B", "OFF", "B", "A", "A", "C", "OFF", "B", "C", "C", "OFF", "A", "A", "OFF", "B", "A", "B", "C", "B", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-02": ["A", "OFF", "C", "B", "A", "C", "C", "A", "B", "B", "OFF", "A", "A", "OFF", "C", "B", "C", "C", "C", "A", "A", "A", "B", "A", "B", "OFF", "B", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-03": ["A", "B", "C", "OFF", "OFF", "C", "C", "A", "B", "B", "A", "A", "A", "B", "C", "OFF", "C", "C", "C", "A", "A", "A", "B", "OFF", "B", "A", "B", "A", "A", "A", "OFF", "B", "B", "B", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-10-04": ["A", "B", "C", "G.S", "C", "C", "OFF", "A", "B", "B", "A", "A", "A", "B", "C", "G.S", "C", "C", "C", "OFF", "A", "A", "B", "B", "B", "A", "B", "A", "A", "OFF", "B", "B", "B", "OFF", "A", "OFF", "OFF", "OFF", "OFF"], "2026-10-05": ["A", "B", "C", "G.S", "C", "C", "B", "A", "OFF", "B", "A", "OFF", "A", "B", "C", "G.S", "C", "C", "C", "B", "A", "A", "B", "B", "OFF", "A", "OFF", "A", "OFF", "B", "B", "B", "OFF", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-10-06": ["A", "B", "C", "G.S", "C", "OFF", "B", "A", "A", "B", "A", "C", "A", "B", "C", "G.S", "OFF", "C", "C", "B", "A", "A", "OFF", "B", "C", "A", "C", "OFF", "B", "B", "B", "OFF", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-10-07": ["OFF", "B", "C", "A", "C", "B", "B", "OFF", "A", "B", "A", "C", "OFF", "B", "C", "A", "A", "OFF", "C", "B", "OFF", "A", "C", "B", "C", "A", "C", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-10-08": ["C", "B", "OFF", "A", "C", "B", "B", "C", "A", "OFF", "A", "OFF", "C", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "OFF", "C", "B", "C", "A", "C", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-10-09": ["C", "OFF", "B", "A", "C", "B", "B", "C", "A", "A", "OFF", "C", "C", "OFF", "B", "A", "A", "A", "A", "B", "B", "B", "C", "B", "C", "OFF", "C", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-10-10": ["C", "A", "B", "OFF", "OFF", "B", "B", "C", "A", "A", "C", "C", "C", "A", "B", "OFF", "A", "A", "A", "B", "B", "B", "C", "OFF", "C", "B", "C", "B", "B", "B", "OFF", "A", "A", "A", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-10-11": ["C", "A", "B", "G.S", "B", "B", "OFF", "C", "A", "A", "C", "C", "C", "A", "B", "G.S", "A", "A", "A", "OFF", "B", "B", "C", "C", "C", "B", "C", "B", "B", "OFF", "A", "A", "A", "OFF", "B", "OFF", "OFF", "OFF", "OFF"], "2026-10-12": ["C", "A", "B", "G.S", "B", "B", "A", "C", "OFF", "A", "C", "OFF", "C", "A", "B", "G.S", "A", "A", "A", "C", "B", "B", "C", "C", "OFF", "B", "OFF", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-13": ["C", "A", "B", "G.S", "B", "OFF", "A", "C", "C", "A", "C", "B", "C", "A", "B", "G.S", "OFF", "A", "A", "C", "B", "B", "OFF", "C", "A", "B", "A", "OFF", "A", "A", "A", "OFF", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-14": ["OFF", "A", "B", "C", "B", "A", "A", "OFF", "C", "A", "C", "B", "OFF", "A", "B", "C", "B", "OFF", "A", "C", "OFF", "B", "A", "C", "A", "B", "A", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-15": ["B", "A", "OFF", "C", "B", "A", "A", "B", "C", "OFF", "C", "B", "B", "A", "OFF", "C", "B", "B", "OFF", "C", "C", "OFF", "A", "C", "A", "B", "A", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-16": ["B", "OFF", "A", "C", "B", "A", "A", "B", "C", "C", "OFF", "B", "B", "OFF", "A", "C", "B", "B", "B", "C", "C", "C", "A", "C", "A", "OFF", "A", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-17": ["B", "C", "A", "OFF", "OFF", "A", "A", "B", "C", "C", "B", "B", "B", "C", "A", "OFF", "B", "B", "B", "C", "C", "C", "A", "OFF", "A", "C", "A", "A", "A", "A", "OFF", "B", "B", "B", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-10-18": ["B", "C", "A", "G.S", "A", "A", "OFF", "B", "C", "C", "B", "B", "B", "C", "A", "G.S", "B", "B", "B", "OFF", "C", "C", "A", "A", "A", "C", "A", "A", "A", "OFF", "B", "B", "B", "OFF", "A", "OFF", "OFF", "OFF", "OFF"], "2026-10-19": ["B", "C", "A", "G.S", "A", "A", "C", "B", "OFF", "C", "B", "OFF", "B", "C", "A", "G.S", "B", "B", "B", "A", "C", "C", "A", "A", "OFF", "C", "OFF", "A", "OFF", "B", "B", "B", "OFF", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-10-20": ["B", "C", "A", "G.S", "A", "OFF", "C", "B", "B", "C", "B", "A", "B", "C", "A", "G.S", "OFF", "B", "B", "A", "C", "C", "OFF", "A", "B", "C", "B", "OFF", "B", "B", "B", "OFF", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-10-21": ["OFF", "C", "A", "B", "A", "C", "C", "OFF", "B", "C", "B", "A", "OFF", "C", "A", "B", "C", "OFF", "B", "A", "OFF", "C", "B", "A", "B", "C", "B", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-10-22": ["A", "C", "OFF", "B", "A", "C", "C", "A", "B", "OFF", "B", "A", "A", "C", "OFF", "B", "C", "C", "OFF", "A", "A", "OFF", "B", "A", "B", "C", "B", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-10-23": ["A", "OFF", "C", "B", "A", "C", "C", "A", "B", "B", "OFF", "A", "A", "OFF", "C", "B", "C", "C", "C", "A", "A", "A", "B", "A", "B", "OFF", "B", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-10-24": ["A", "B", "C", "OFF", "OFF", "C", "C", "A", "B", "B", "A", "A", "A", "B", "C", "OFF", "C", "C", "C", "A", "A", "A", "B", "OFF", "B", "A", "B", "B", "B", "B", "OFF", "A", "A", "A", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-10-25": ["A", "B", "C", "G.S", "C", "C", "OFF", "A", "B", "B", "A", "A", "A", "B", "C", "G.S", "C", "C", "C", "OFF", "A", "A", "B", "B", "B", "A", "B", "B", "B", "OFF", "A", "A", "A", "OFF", "B", "OFF", "OFF", "OFF", "OFF"], "2026-10-26": ["A", "B", "C", "G.S", "C", "C", "B", "A", "OFF", "B", "A", "OFF", "A", "B", "C", "G.S", "C", "C", "C", "B", "A", "A", "B", "B", "OFF", "A", "OFF", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-27": ["A", "B", "C", "G.S", "C", "OFF", "B", "A", "A", "B", "A", "C", "A", "B", "C", "G.S", "OFF", "C", "C", "B", "A", "A", "OFF", "B", "C", "A", "C", "OFF", "A", "A", "A", "OFF", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-28": ["OFF", "B", "C", "A", "C", "B", "B", "OFF", "A", "B", "A", "C", "OFF", "B", "C", "A", "A", "OFF", "C", "B", "OFF", "A", "C", "B", "C", "A", "C", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-29": ["C", "B", "OFF", "A", "C", "B", "B", "C", "A", "OFF", "A", "C", "C", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "OFF", "C", "B", "C", "A", "C", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-30": ["C", "OFF", "B", "A", "C", "B", "B", "C", "A", "A", "OFF", "C", "C", "OFF", "B", "A", "A", "A", "A", "B", "B", "B", "C", "B", "C", "OFF", "C", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-10-31": ["C", "A", "B", "OFF", "OFF", "B", "B", "C", "A", "A", "C", "C", "C", "A", "B", "OFF", "A", "A", "A", "B", "B", "B", "C", "OFF", "C", "B", "C", "A", "A", "A", "OFF", "B", "B", "B", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-11-01": ["C", "A", "B", "G.S", "B", "B", "OFF", "C", "A", "A", "C", "C", "C", "A", "B", "G.S", "A", "A", "A", "OFF", "B", "B", "C", "C", "C", "B", "C", "A", "A", "OFF", "B", "B", "B", "OFF", "A", "OFF", "OFF", "OFF", "OFF"], "2026-11-02": ["C", "A", "B", "G.S", "B", "B", "A", "C", "OFF", "A", "C", "OFF", "C", "A", "B", "G.S", "A", "A", "A", "C", "B", "B", "C", "C", "OFF", "B", "OFF", "A", "OFF", "B", "B", "B", "OFF", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-11-03": ["C", "A", "B", "G.S", "B", "OFF", "A", "C", "C", "A", "C", "B", "C", "A", "B", "G.S", "OFF", "A", "A", "C", "B", "B", "OFF", "C", "A", "B", "A", "OFF", "B", "B", "B", "OFF", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-11-04": ["OFF", "A", "B", "C", "B", "A", "A", "OFF", "C", "A", "C", "B", "OFF", "A", "B", "C", "B", "OFF", "A", "C", "OFF", "B", "A", "C", "A", "B", "A", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-11-05": ["B", "A", "OFF", "C", "B", "A", "A", "B", "C", "OFF", "C", "B", "B", "A", "OFF", "C", "B", "B", "OFF", "C", "C", "OFF", "A", "C", "A", "B", "A", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-11-06": ["B", "OFF", "A", "C", "B", "A", "A", "B", "C", "C", "OFF", "B", "B", "OFF", "A", "C", "B", "B", "B", "C", "C", "C", "A", "C", "A", "OFF", "A", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-11-07": ["B", "C", "A", "OFF", "OFF", "A", "A", "B", "C", "C", "B", "B", "B", "C", "A", "OFF", "B", "B", "B", "C", "C", "C", "A", "OFF", "A", "C", "A", "B", "B", "B", "OFF", "A", "A", "A", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-11-08": ["B", "C", "A", "G.S", "A", "A", "OFF", "B", "C", "C", "B", "B", "B", "C", "A", "G.S", "B", "B", "B", "OFF", "C", "C", "A", "A", "A", "C", "A", "B", "B", "OFF", "A", "A", "A", "OFF", "B", "OFF", "OFF", "OFF", "OFF"], "2026-11-09": ["B", "C", "A", "G.S", "A", "A", "C", "B", "OFF", "C", "B", "OFF", "B", "C", "A", "G.S", "B", "B", "B", "A", "C", "C", "A", "A", "OFF", "C", "OFF", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-11-10": ["B", "C", "A", "G.S", "A", "OFF", "C", "B", "B", "C", "B", "A", "B", "C", "A", "G.S", "OFF", "B", "B", "A", "C", "C", "OFF", "A", "B", "C", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-11-11": ["OFF", "C", "A", "B", "A", "C", "C", "OFF", "B", "C", "B", "A", "OFF", "C", "A", "B", "C", "OFF", "B", "A", "OFF", "C", "B", "A", "B", "C", "B", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-11-12": ["A", "C", "OFF", "B", "A", "C", "C", "A", "B", "OFF", "B", "A", "A", "C", "OFF", "B", "C", "C", "OFF", "A", "A", "OFF", "B", "A", "B", "C", "B", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-11-13": ["A", "OFF", "C", "B", "A", "C", "C", "A", "B", "B", "OFF", "A", "A", "OFF", "C", "B", "C", "C", "C", "A", "A", "A", "B", "A", "B", "OFF", "B", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-11-14": ["A", "B", "C", "OFF", "OFF", "C", "C", "A", "B", "B", "A", "A", "A", "B", "C", "OFF", "C", "C", "C", "A", "A", "A", "B", "OFF", "B", "A", "B", "A", "A", "A", "OFF", "B", "B", "B", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-11-15": ["A", "B", "C", "G.S", "C", "C", "OFF", "A", "B", "B", "A", "A", "A", "B", "C", "G.S", "C", "C", "C", "OFF", "A", "A", "B", "B", "B", "A", "B", "A", "A", "OFF", "B", "B", "B", "OFF", "A", "OFF", "OFF", "OFF", "OFF"], "2026-11-16": ["A", "B", "C", "G.S", "C", "C", "B", "A", "OFF", "B", "A", "OFF", "A", "B", "C", "G.S", "C", "C", "C", "B", "A", "A", "B", "B", "OFF", "A", "OFF", "A", "OFF", "B", "B", "B", "OFF", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-11-17": ["A", "B", "C", "G.S", "C", "OFF", "B", "A", "A", "B", "A", "C", "A", "B", "C", "G.S", "OFF", "C", "C", "B", "A", "A", "OFF", "B", "C", "A", "C", "OFF", "B", "B", "B", "OFF", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-11-18": ["OFF", "B", "C", "A", "C", "B", "B", "OFF", "A", "B", "A", "C", "OFF", "B", "C", "A", "A", "OFF", "C", "B", "OFF", "A", "C", "B", "C", "A", "C", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-11-19": ["C", "B", "OFF", "A", "C", "B", "B", "C", "A", "OFF", "A", "C", "C", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "OFF", "C", "B", "C", "A", "C", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-11-20": ["C", "OFF", "B", "A", "C", "B", "B", "C", "A", "A", "OFF", "C", "C", "OFF", "B", "A", "A", "A", "A", "B", "B", "B", "C", "B", "C", "OFF", "C", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-11-21": ["C", "A", "B", "OFF", "OFF", "B", "B", "C", "A", "A", "C", "C", "C", "A", "B", "OFF", "A", "A", "A", "B", "B", "B", "C", "OFF", "C", "B", "C", "B", "B", "B", "OFF", "A", "A", "A", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-11-22": ["C", "A", "B", "G.S", "B", "B", "OFF", "C", "A", "A", "C", "C", "C", "A", "B", "G.S", "A", "A", "A", "OFF", "B", "B", "C", "C", "C", "B", "C", "B", "B", "OFF", "A", "A", "A", "OFF", "B", "OFF", "OFF", "OFF", "OFF"], "2026-11-23": ["C", "A", "B", "G.S", "B", "B", "A", "C", "OFF", "A", "C", "OFF", "C", "A", "B", "G.S", "A", "A", "A", "C", "B", "B", "C", "C", "OFF", "B", "OFF", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-11-24": ["C", "A", "B", "G.S", "B", "OFF", "A", "C", "C", "A", "C", "B", "C", "A", "B", "G.S", "OFF", "A", "A", "C", "B", "B", "OFF", "C", "A", "B", "A", "OFF", "A", "A", "A", "OFF", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-11-25": ["OFF", "A", "B", "C", "B", "A", "A", "OFF", "C", "A", "C", "B", "OFF", "A", "B", "C", "B", "OFF", "A", "C", "OFF", "B", "A", "C", "A", "B", "A", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-11-26": ["B", "A", "OFF", "C", "B", "A", "A", "B", "C", "OFF", "C", "B", "B", "A", "OFF", "C", "B", "B", "OFF", "C", "C", "OFF", "A", "C", "A", "B", "A", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-11-27": ["B", "OFF", "A", "C", "B", "A", "A", "B", "C", "C", "OFF", "B", "B", "OFF", "A", "C", "B", "B", "B", "C", "C", "C", "A", "C", "A", "OFF", "A", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-11-28": ["B", "C", "A", "OFF", "OFF", "A", "A", "B", "C", "C", "B", "B", "B", "C", "A", "OFF", "B", "B", "B", "C", "C", "C", "A", "OFF", "A", "C", "A", "A", "A", "A", "OFF", "B", "B", "B", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-11-29": ["B", "C", "A", "G.S", "A", "A", "OFF", "B", "C", "C", "B", "B", "B", "C", "A", "G.S", "B", "B", "B", "OFF", "C", "C", "A", "A", "A", "C", "A", "A", "A", "OFF", "B", "B", "B", "OFF", "A", "OFF", "OFF", "OFF", "OFF"], "2026-11-30": ["B", "C", "A", "G.S", "A", "A", "C", "B", "OFF", "C", "B", "OFF", "B", "C", "A", "G.S", "B", "B", "B", "A", "C", "C", "A", "A", "OFF", "C", "OFF", "A", "OFF", "B", "B", "B", "OFF", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-01": ["B", "C", "A", "G.S", "A", "OFF", "C", "B", "B", "C", "B", "A", "B", "C", "A", "G.S", "OFF", "B", "B", "A", "C", "C", "OFF", "A", "B", "C", "B", "OFF", "B", "B", "B", "OFF", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-02": ["OFF", "C", "A", "B", "A", "C", "C", "OFF", "B", "C", "B", "A", "OFF", "C", "A", "B", "C", "OFF", "B", "A", "OFF", "C", "B", "A", "B", "C", "B", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-03": ["A", "C", "OFF", "B", "A", "C", "C", "A", "B", "OFF", "B", "A", "A", "C", "OFF", "B", "C", "C", "OFF", "A", "A", "OFF", "B", "A", "B", "C", "B", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-04": ["A", "OFF", "C", "B", "A", "C", "C", "A", "B", "B", "OFF", "A", "A", "OFF", "C", "B", "C", "C", "C", "A", "A", "A", "B", "A", "B", "OFF", "B", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-05": ["A", "B", "C", "OFF", "OFF", "C", "C", "A", "B", "B", "A", "A", "A", "B", "C", "OFF", "C", "C", "C", "A", "A", "A", "B", "OFF", "B", "A", "B", "B", "B", "B", "OFF", "A", "A", "A", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-12-06": ["A", "B", "C", "G.S", "C", "C", "OFF", "A", "B", "B", "A", "A", "A", "B", "C", "G.S", "C", "C", "C", "OFF", "A", "A", "B", "B", "B", "A", "B", "B", "B", "OFF", "A", "A", "A", "OFF", "B", "OFF", "OFF", "OFF", "OFF"], "2026-12-07": ["A", "B", "C", "G.S", "C", "C", "B", "A", "OFF", "B", "A", "OFF", "A", "B", "C", "G.S", "C", "C", "C", "B", "A", "A", "B", "B", "OFF", "A", "OFF", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-12-08": ["A", "B", "C", "G.S", "C", "OFF", "B", "A", "A", "B", "A", "C", "A", "B", "C", "G.S", "OFF", "C", "C", "B", "A", "A", "OFF", "B", "C", "A", "C", "OFF", "A", "A", "A", "OFF", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-12-09": ["OFF", "B", "C", "A", "C", "B", "B", "OFF", "A", "B", "A", "C", "OFF", "B", "C", "A", "A", "OFF", "C", "B", "OFF", "A", "C", "B", "C", "A", "C", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-12-10": ["C", "B", "OFF", "A", "C", "B", "B", "C", "A", "OFF", "A", "C", "C", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "OFF", "C", "B", "C", "A", "C", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-12-11": ["C", "OFF", "B", "A", "C", "B", "B", "C", "A", "A", "OFF", "C", "C", "OFF", "B", "A", "A", "A", "A", "B", "B", "B", "C", "B", "C", "OFF", "C", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-12-12": ["C", "A", "B", "OFF", "OFF", "B", "B", "C", "A", "A", "C", "C", "C", "A", "B", "OFF", "A", "A", "A", "B", "B", "B", "C", "OFF", "C", "B", "C", "A", "A", "A", "OFF", "B", "B", "B", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-12-13": ["C", "A", "B", "G.S", "B", "B", "OFF", "C", "A", "A", "C", "C", "C", "A", "B", "G.S", "A", "A", "A", "OFF", "B", "B", "C", "C", "C", "B", "C", "A", "A", "OFF", "B", "B", "B", "OFF", "A", "OFF", "OFF", "OFF", "OFF"], "2026-12-14": ["C", "A", "B", "G.S", "B", "B", "A", "C", "OFF", "A", "C", "OFF", "C", "A", "B", "G.S", "A", "A", "A", "C", "B", "B", "C", "C", "OFF", "B", "OFF", "A", "OFF", "B", "B", "B", "OFF", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-15": ["C", "A", "B", "G.S", "B", "OFF", "A", "C", "C", "A", "C", "B", "C", "A", "B", "G.S", "OFF", "A", "A", "C", "B", "B", "OFF", "C", "A", "B", "A", "OFF", "B", "B", "B", "OFF", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-16": ["OFF", "A", "B", "C", "B", "A", "A", "OFF", "C", "A", "C", "B", "OFF", "A", "B", "C", "B", "OFF", "A", "C", "OFF", "B", "A", "C", "A", "B", "A", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-17": ["B", "A", "OFF", "C", "B", "A", "A", "B", "C", "OFF", "C", "B", "B", "A", "OFF", "C", "B", "B", "OFF", "C", "C", "OFF", "A", "C", "A", "B", "A", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-18": ["B", "OFF", "A", "C", "B", "A", "A", "B", "C", "C", "OFF", "B", "B", "OFF", "A", "C", "B", "B", "B", "C", "C", "C", "A", "C", "A", "OFF", "A", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-19": ["B", "C", "A", "OFF", "OFF", "A", "A", "B", "C", "C", "B", "B", "B", "C", "A", "OFF", "B", "B", "B", "C", "C", "C", "A", "OFF", "A", "C", "A", "B", "B", "B", "OFF", "A", "A", "A", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-12-20": ["B", "C", "A", "G.S", "A", "A", "OFF", "B", "C", "C", "B", "B", "B", "C", "A", "G.S", "B", "B", "B", "OFF", "C", "C", "A", "A", "A", "C", "A", "B", "B", "OFF", "A", "A", "A", "OFF", "B", "OFF", "OFF", "OFF", "OFF"], "2026-12-21": ["B", "C", "A", "G.S", "A", "A", "C", "B", "OFF", "C", "B", "OFF", "B", "C", "A", "G.S", "B", "B", "B", "A", "C", "C", "A", "A", "OFF", "C", "OFF", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-12-22": ["B", "C", "A", "G.S", "A", "OFF", "C", "B", "B", "C", "B", "A", "B", "C", "A", "G.S", "OFF", "B", "B", "A", "C", "C", "OFF", "A", "B", "C", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-12-23": ["OFF", "C", "A", "B", "A", "C", "C", "OFF", "B", "C", "B", "A", "OFF", "C", "A", "B", "C", "OFF", "B", "A", "OFF", "C", "B", "A", "B", "C", "B", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-12-24": ["A", "C", "OFF", "B", "A", "C", "C", "A", "B", "OFF", "B", "A", "A", "C", "OFF", "B", "C", "C", "OFF", "A", "A", "OFF", "B", "A", "B", "C", "B", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-12-25": ["A", "OFF", "C", "B", "A", "C", "C", "A", "B", "B", "OFF", "A", "A", "OFF", "C", "B", "C", "C", "C", "A", "A", "A", "B", "A", "B", "OFF", "B", "A", "A", "A", "A", "B", "B", "B", "B", "G.S", "G.S", "G.S", "G.S"], "2026-12-26": ["A", "B", "C", "OFF", "OFF", "C", "C", "A", "B", "B", "A", "A", "A", "B", "C", "OFF", "C", "C", "C", "A", "A", "A", "B", "OFF", "B", "A", "B", "A", "A", "A", "OFF", "B", "B", "B", "OFF", "G.S", "G.S", "G.S", "G.S"], "2026-12-27": ["A", "B", "C", "G.S", "C", "C", "OFF", "A", "B", "B", "A", "A", "A", "B", "C", "G.S", "C", "C", "C", "OFF", "A", "A", "B", "B", "B", "A", "B", "A", "A", "OFF", "B", "B", "B", "OFF", "A", "OFF", "OFF", "OFF", "OFF"], "2026-12-28": ["A", "B", "C", "G.S", "C", "C", "B", "A", "OFF", "B", "A", "OFF", "A", "B", "C", "G.S", "C", "C", "C", "B", "A", "A", "B", "B", "OFF", "A", "OFF", "A", "OFF", "B", "B", "B", "OFF", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-29": ["A", "B", "C", "G.S", "C", "OFF", "B", "A", "A", "B", "A", "C", "A", "B", "C", "G.S", "OFF", "C", "C", "B", "A", "A", "OFF", "B", "C", "A", "C", "OFF", "B", "B", "B", "OFF", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-30": ["OFF", "B", "C", "A", "C", "B", "B", "OFF", "A", "B", "A", "C", "OFF", "B", "C", "A", "A", "OFF", "C", "B", "OFF", "A", "C", "B", "C", "A", "C", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"], "2026-12-31": ["C", "B", "OFF", "A", "C", "B", "B", "C", "A", "OFF", "A", "C", "C", "B", "OFF", "A", "A", "A", "OFF", "B", "B", "OFF", "C", "B", "C", "A", "C", "B", "B", "B", "B", "A", "A", "A", "A", "G.S", "G.S", "G.S", "G.S"]};
+const LOCS = ['MINES','COAL YARD','WEIGHBRIDGE','SIDING (Biratoli & Kusmahi)'];
+const SHIFT_COLS = ['A','B','C','G.S','OFF'];
+
+function fmtDate(iso){
+  const d = new Date(iso+'T00:00:00');
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = d.getFullYear();
+  const day = d.toLocaleDateString('en-US',{weekday:'long'});
+  return {display: dd+'/'+mm+'/'+yyyy, day: day};
+}
+
+function statusFor(sh){
+  if(sh === 'OFF') return 'Off Duty';
+  if(sh === 'G.S') return 'General Shift Duty';
+  if(!sh) return 'No Data';
+  return 'Planned On Duty';
+}
+
+function buildReport(dateIso){
+  const shiftArr = SHIFTS_BY_DATE[dateIso];
+  const {display, day} = fmtDate(dateIso);
+  document.getElementById('subtitleLine').innerHTML =
+    'PLANNED MANPOWER DEPLOYMENT&nbsp;&nbsp;|&nbsp;&nbsp;DATE: '+display+' ('+day+')';
+
+  if(!shiftArr){
+    document.getElementById('gridBody').innerHTML =
+      '<tr><td colspan="6" style="text-align:center;color:#900;">No roster data available for this date.</td></tr>';
+    return;
+  }
+
+  // group employees by location+shift
+  const groups = {};
+  LOCS.forEach(loc=>{ groups[loc]={}; SHIFT_COLS.forEach(s=>groups[loc][s]=[]); });
+
+  const totals = {A:0,B:0,C:0,'G.S':0,OFF:0};
+  const locTotals = {};
+  LOCS.forEach(l=>locTotals[l]=0);
+
+  EMPLOYEES.forEach((emp, idx)=>{
+    const sh = shiftArr[idx];
+    if(!sh) return;
+    if(groups[emp.loc] && groups[emp.loc][sh] !== undefined){
+      groups[emp.loc][sh].push(emp);
+    }
+    if(totals[sh] !== undefined) totals[sh]++;
+    if(locTotals[emp.loc] !== undefined) locTotals[emp.loc]++;
+  });
+
+  // Quick view
+  document.getElementById('qvA').textContent = totals.A;
+  document.getElementById('qvB').textContent = totals.B;
+  document.getElementById('qvC').textContent = totals.C;
+  document.getElementById('qvG').textContent = totals['G.S'];
+  document.getElementById('qvOFF').textContent = totals.OFF;
+  document.getElementById('qvTOTAL').textContent = totals.A+totals.B+totals.C+totals['G.S']+totals.OFF;
+
+  document.getElementById('totA').textContent = totals.A;
+  document.getElementById('totB').textContent = totals.B;
+  document.getElementById('totC').textContent = totals.C;
+  document.getElementById('totG').textContent = totals['G.S'];
+  document.getElementById('totOFF').textContent = totals.OFF;
+
+  // Grid body
+  let rows = '';
+  LOCS.forEach(loc=>{
+    rows += '<tr>';
+    rows += '<td class="loc">'+loc+'</td>';
+    SHIFT_COLS.forEach(sc=>{
+      const list = groups[loc][sc];
+      let inner;
+      if(list.length===0){
+        inner = '<div style="text-align:center;color:#999;">&mdash;</div>';
+      } else {
+        inner = list.map((e,i)=>
+          '<div class="line">'+(i+1)+'. '+e.name+'<br><span class="desig">('+ (e.desig||'') +')</span></div>'
+        ).join('');
+      }
+      rows += '<td class="cell" contenteditable="true">'+inner+'</td>';
+    });
+    rows += '</tr>';
+  });
+  document.getElementById('gridBody').innerHTML = rows;
+}
+
+document.getElementById('datePick').addEventListener('change', function(){
+  buildReport(this.value);
+});
+buildReport(document.getElementById('datePick').value);
+
+// ---------- Export helpers ----------
+function todayTag(){
+  return document.getElementById('datePick').value;
+}
+
+function downloadJPG(){
+  const el = document.getElementById('report');
+  html2canvas(el, {scale:2, backgroundColor:'#ffffff'}).then(canvas=>{
+    const link = document.createElement('a');
+    link.download = 'Manpower_Intimation_'+todayTag()+'.jpg';
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+  });
+}
+
+function downloadPDF(){
+  const el = document.getElementById('report');
+  html2canvas(el, {scale:2, backgroundColor:'#ffffff'}).then(canvas=>{
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    const pxW = canvas.width, pxH = canvas.height;
+    const orientation = pxW > pxH ? 'landscape' : 'portrait';
+    const pdf = new jsPDF({orientation, unit:'pt', format:'a4'});
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pageW/pxW, pageH/pxH);
+    const w = pxW*ratio, h = pxH*ratio;
+    const x = (pageW - w)/2, y = (pageH - h)/2;
+    pdf.addImage(imgData, 'JPEG', x, y, w, h);
+    pdf.save('Manpower_Intimation_'+todayTag()+'.pdf');
+  });
+}
+
+function downloadXLSX(){
+  const dateIso = todayTag();
+  const shiftArr = SHIFTS_BY_DATE[dateIso];
+  const {display, day} = fmtDate(dateIso);
+  const wb = XLSX.utils.book_new();
+
+  // --- Sheet 1: Deployment Plan (visual grid as text) ---
+  const aoa = [];
+  aoa.push(["MANPOWER INTIMATION"]);
+  aoa.push(['PLANNED MANPOWER DEPLOYMENT | DATE: '+display+' ('+day+')']);
+  aoa.push([]);
+  aoa.push(['TOTAL','SHIFT A','SHIFT B','SHIFT C','G.S','OFF / REST']);
+  aoa.push([
+    document.getElementById('qvTOTAL').textContent,
+    document.getElementById('qvA').textContent,
+    document.getElementById('qvB').textContent,
+    document.getElementById('qvC').textContent,
+    document.getElementById('qvG').textContent,
+    document.getElementById('qvOFF').textContent
+  ]);
+  aoa.push([]);
+  aoa.push(['DEPLOYMENT LOCATION','SHIFT A','SHIFT B','SHIFT C','G.S','OFF / REST']);
+
+  const gridRows = document.querySelectorAll('#gridBody tr');
+  gridRows.forEach(tr=>{
+    const cells = tr.querySelectorAll('td');
+    const rowVals = [];
+    cells.forEach(td=>{
+      let txt = td.innerText.trim();
+      rowVals.push(txt);
+    });
+    aoa.push(rowVals);
+  });
+  aoa.push([
+    'TOTAL MANPOWER',
+    document.getElementById('totA').textContent,
+    document.getElementById('totB').textContent,
+    document.getElementById('totC').textContent,
+    document.getElementById('totG').textContent,
+    document.getElementById('totOFF').textContent
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:22},{wch:28},{wch:28},{wch:28},{wch:24},{wch:24}];
+  ws['!rows'] = aoa.map((r,i)=> (i>=7 && i<7+gridRows.length) ? {hpt:110} : undefined);
+  ws['!merges'] = [
+    {s:{r:0,c:0},e:{r:0,c:5}},
+    {s:{r:1,c:0},e:{r:1,c:5}}
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Deployment Plan');
+
+  // --- Sheet 2: Detailed Data (flat list) ---
+  const dd = [['S.No.','Location','Employee Name','Emp ID','Designation','Shift','Status']];
+  EMPLOYEES.forEach((emp, idx)=>{
+    const sh = shiftArr ? shiftArr[idx] : '';
+    dd.push([idx+1, emp.loc, emp.name, emp.id, emp.desig, sh, statusFor(sh)]);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(dd);
+  ws2['!cols'] = [{wch:6},{wch:24},{wch:26},{wch:10},{wch:32},{wch:8},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Detailed Data');
+
+  XLSX.writeFile(wb, 'Manpower_Intimation_'+dateIso+'.xlsx');
+}
+</script>
+</body>
+</html>

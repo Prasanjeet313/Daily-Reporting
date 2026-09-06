@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tubed Mine - Daily Shift Report</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; }
+        #report-container { background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 1050px; margin: auto; }
+        h2 { text-align: center; color: #1a365d; margin-bottom: 5px; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
+        h4 { text-align: center; color: #4a5568; margin-top: 0; margin-bottom: 25px; font-weight: normal; }
+        
+        /* Master Stoppage Panel */
+        .stoppage-panel { background: #fff3cd; border-left: 5px solid #ffc107; padding: 15px 20px; margin-bottom: 25px; border-radius: 4px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+        .stoppage-panel h5 { margin: 0 10px 0 0; font-size: 15px; color: #856404; width: 100%; }
+        
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 14px; }
+        th, td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; vertical-align: middle; }
+        th { background-color: #1a365d; color: white; font-weight: 600; }
+        .section-header { background-color: #e2e8f0; font-weight: bold; color: #1a202c; }
+        
+        /* Inputs, Selects & Textareas */
+        input, select, textarea { padding: 7px; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 4px; background-color: #f8fafc; font-family: inherit; color: #334155; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #3b82f6; background-color: #fff; }
+        input[type="time"] { width: auto; }
+        textarea { resize: none; overflow: hidden; min-height: 35px; line-height: 1.4; }
+        
+        /* Buttons */
+        .btn { padding: 8px 15px; background-color: #1a365d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; }
+        .btn:hover { background-color: #2a4365; }
+        .btn-export { background-color: #059669; font-size: 14px; margin-right: 10px; }
+        .btn-export:hover { background-color: #047857; }
+        .btn-blasting { background-color: #d97706; font-size: 14px; }
+        .btn-blasting:hover { background-color: #b45309; }
+        .btn-add { background-color: #10b981; padding: 4px 10px; font-size: 16px; line-height: 1; border-radius: 4px; margin-left: 5px; }
+        .btn-add:hover { background-color: #059669; }
+        .btn-remove { background-color: #ef4444; padding: 4px 10px; font-size: 16px; line-height: 1; border-radius: 4px; margin-left: 5px; }
+        
+        /* Layout Utilities */
+        .breakdown-row { background-color: #fef2f2; }
+        .shift-c-only { display: none; background-color: #f8fafc; }
+        .shift-ab-only { display: table-row; background-color: #f8fafc; }
+        .trips-container { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .trips-box { width: 70px; text-align: center; font-weight: bold; }
+        .seam-group { display: flex; align-items: center; margin-bottom: 5px; }
+        .export-span { font-family: inherit; font-size: 14px; color: #1e293b; white-space: pre-wrap; word-break: break-word; }
+        
+        /* Counter Widget for Excavators */
+        .counter-widget { display: flex; align-items: center; justify-content: flex-start; gap: 5px; }
+        .counter-widget input { width: 45px; text-align: center; font-weight: bold; padding: 5px; background: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 4px; pointer-events: none; }
+        
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+
+<div class="no-print" style="text-align: center; margin-bottom: 20px;">
+    <button class="btn btn-export" onclick="downloadPDF()">⬇ Download PDF</button>
+    <button class="btn btn-export" onclick="downloadJPG()">⬇ Download JPG</button>
+    <button class="btn btn-blasting" onclick="logGlobalBlasting()">🧨 Log Daily Blasting (2 PM - 4 PM)</button>
+</div>
+
+<div id="report-container">
+    <h2>DAILY SHIFT REPORT - TUBED COAL MINE</h2>
+    <h4>Operations & Equipment Status Log</h4>
+
+    <table>
+        <tr>
+            <td width="15%"><b>Date:</b></td>
+            <td width="35%"><input type="date" id="reportDate"></td>
+            <td width="15%"><b>Shift:</b></td>
+            <td width="35%">
+                <select id="shiftSelect" onchange="toggleShiftModes()">
+                    <option value="A">Shift A (6 AM - 2 PM)</option>
+                    <option value="B">Shift B (2 PM - 10 PM)</option>
+                    <option value="C">Shift C (10 PM - 6 AM)</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td><b>Shift Incharge:</b></td>
+            <td colspan="3">
+                <select id="shiftIncharge" style="width: 50%;">
+                    <option value="Rahul Kumar-86">Rahul Kumar-86</option>
+                    <option value="Rahul Kumar-91">Rahul Kumar-91</option>
+                    <option value="Prasanjeet Kumar">Prasanjeet Kumar</option>
+                    <option value="P. Amar Rathod">P. Amar Rathod</option>
+                    <option value="Other">Other</option>
+                </select>
+            </td>
+        </tr>
+    </table>
+
+    <div class="stoppage-panel no-print">
+        <h5>🛠 Log Stoppage / Breakdown</h5>
+        <select id="panel-reason" style="width: 18%;">
+            <option value="Rainfall">Rainfall</option>
+            <option value="Major Breakdown">Major Breakdown</option>
+            <option value="Power Failure">Power Failure</option>
+            <option value="Shift Change">Shift Change</option>
+            <option value="Other">Other</option>
+        </select>
+        
+        <select id="panel-eqp" style="width: 18%;">
+            <option value="-- Eqp --">-- Select Eqp --</option>
+            <option value="SM-1">SM-1</option><option value="SM-2">SM-2</option><option value="SM-3">SM-3</option>
+            <option value="Exc-1">Exc-1</option><option value="Exc-2">Exc-2</option><option value="Exc-3">Exc-3</option><option value="Exc-4">Exc-4</option><option value="Exc-5">Exc-5</option>
+            <option value="Crusher-1">Crusher-1</option><option value="Crusher-2">Crusher-2</option>
+            <option value="Pump (1-4)">Pumps (1-4)</option>
+            <option value="Other">Other</option>
+        </select>
+
+        <select id="panel-section" style="width: 20%;">
+            <option value="sec1-body">1. Coal Production</option>
+            <option value="sec2-body">2. OB Removal</option>
+            <option value="sec3-body">3. Crushing</option>
+            <option value="sec4-body">4. Dispatch</option>
+            <option value="sec5-body">5. Pump Operations</option>
+        </select>
+
+        Start: <input type="time" id="panel-start">
+        End: <input type="time" id="panel-end">
+        <button class="btn" style="background-color: #d97706;" onclick="injectBreakdown()">+ Add Stoppage</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th width="5%">SL</th>
+                <th width="25%">Operation / Parameter</th>
+                <th width="15%">Status</th>
+                <th width="15%">Metrics (Eqp)</th>
+                <th width="40%">Remarks & Locations</th>
+            </tr>
+        </thead>
+        
+        <tbody id="sec1-body">
+            <tr class="section-header"><td colspan="5">1. COAL PRODUCTION</td></tr>
+            <tr>
+                <td>1.1</td>
+                <td>SM Production</td>
+                <td>
+                    <select><option>Active</option><option>Partial</option><option>Inactive</option></select>
+                </td>
+                <td>
+                    <select><option>3 SMs</option><option>2 SMs</option><option>1 SM</option><option>0 SMs</option></select>
+                </td>
+                <td id="sm-remarks-cell">
+                    <div class="seam-group">
+                        <select style="width: 80%;">
+                            <option>Seam 7 Top</option><option>Seam 7 Bottom</option><option>Seam 7 Combined</option>
+                            <option>Seam 5 Top</option><option>Seam 5 Bottom</option>
+                            <option>Seam 3 Top</option><option>Seam 3 Middle</option><option>Seam 3 Bottom</option>
+                            <option>Seam 2</option><option>Other</option>
+                        </select>
+                        <button class="btn btn-add no-print" onclick="addSeam(this)">+</button>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>1.2</td>
+                <td>ROM Production</td>
+                <td><select><option>Active</option><option>Partial</option><option>Inactive</option></select></td>
+                <td>
+                    <div class="counter-widget">
+                        <button class="btn btn-remove no-print" onclick="updateCounter('exc-coal', -1)">-</button>
+                        <input type="text" id="exc-coal" value="5" readonly>
+                        <button class="btn btn-add no-print" onclick="updateCounter('exc-coal', 1)">+</button>
+                    </div>
+                </td>
+                <td><textarea placeholder="Locations..." oninput="autoResize(this)"></textarea></td>
+            </tr>
+        </tbody>
+
+        <tbody id="sec2-body">
+            <tr class="section-header"><td colspan="5">2. OVERBURDEN (OB) REMOVAL</td></tr>
+            <tr>
+                <td>2.1</td>
+                <td>OB Excavation</td>
+                <td><select><option>Active</option><option>Partial</option><option>Inactive</option></select></td>
+                <td>
+                    <div class="counter-widget">
+                        <button class="btn btn-remove no-print" onclick="updateCounter('exc-ob', -1)">-</button>
+                        <input type="text" id="exc-ob" value="5" readonly>
+                        <button class="btn btn-add no-print" onclick="updateCounter('exc-ob', 1)">+</button>
+                    </div>
+                </td>
+                <td><textarea placeholder="Face remarks..." oninput="autoResize(this)"></textarea></td>
+            </tr>
+            <tr>
+                <td>2.2</td>
+                <td>OB Dumping</td>
+                <td><select><option>Active</option><option>Partial</option><option>Inactive</option></select></td>
+                <td><select><option>Standard Ops</option><option>Halted</option></select></td>
+                <td><textarea placeholder="Dump area remarks..." oninput="autoResize(this)"></textarea></td>
+            </tr>
+        </tbody>
+
+        <tbody id="sec3-body">
+            <tr class="section-header"><td colspan="5">3. STOCKYARD & CRUSHING</td></tr>
+            <tr>
+                <td>3.1</td>
+                <td>ROM Crusher</td>
+                <td><select><option>Active</option><option>Partial</option><option>Inactive</option></select></td>
+                <td><select><option>2 Crushers</option><option>1 Crusher</option><option>0 Crushers</option></select></td>
+                <td><textarea placeholder="Remarks..." oninput="autoResize(this)"></textarea></td>
+            </tr>
+        </tbody>
+
+        <tbody id="sec4-body">
+            <tr class="section-header"><td colspan="5">4. WEIGHBRIDGE & DISPATCH</td></tr>
+            <tr>
+                <td>4.1</td>
+                <td>Coal Dispatch Status</td>
+                <td><select><option>Active</option><option>Partial</option><option>Inactive</option></select></td>
+                <td><select><option>Ongoing</option><option>Halted</option></select></td>
+                <td><textarea placeholder="Remarks..." oninput="autoResize(this)"></textarea></td>
+            </tr>
+            
+            <tr class="shift-ab-only">
+                <td>4.2</td>
+                <td>Trips (End of Shift)</td>
+                <td colspan="3">
+                    <div class="trips-container">
+                        <label>Kushmahi:</label>
+                        <input type="number" id="kushmahiAB" class="trips-box" oninput="calcTrips('AB')" value="0">
+                        <label>Biratoli:</label>
+                        <input type="number" id="biratoliAB" class="trips-box" oninput="calcTrips('AB')" value="0">
+                        <label><b>Total:</b></label>
+                        <input type="number" id="totalAB" class="trips-box" readonly style="background: #e2e8f0; color: #000;">
+                    </div>
+                </td>
+            </tr>
+
+            <tr class="shift-c-only">
+                <td>4.2</td>
+                <td>Trips (Pre-Midnight)</td>
+                <td colspan="3">
+                    <div class="trips-container">
+                        <label>Kushmahi:</label>
+                        <input type="number" id="kushmahiC_Pre" class="trips-box" oninput="calcTrips('C_Pre')" value="0">
+                        <label>Biratoli:</label>
+                        <input type="number" id="biratoliC_Pre" class="trips-box" oninput="calcTrips('C_Pre')" value="0">
+                        <label><b>Total:</b></label>
+                        <input type="number" id="totalC_Pre" class="trips-box" readonly style="background: #e2e8f0; color: #000;">
+                    </div>
+                </td>
+            </tr>
+            <tr class="shift-c-only">
+                <td>4.3</td>
+                <td>Trips (Post-Midnight)</td>
+                <td colspan="3">
+                    <div class="trips-container">
+                        <label>Kushmahi:</label>
+                        <input type="number" id="kushmahiC_Post" class="trips-box" oninput="calcTrips('C_Post')" value="0">
+                        <label>Biratoli:</label>
+                        <input type="number" id="biratoliC_Post" class="trips-box" oninput="calcTrips('C_Post')" value="0">
+                        <label><b>Total:</b></label>
+                        <input type="number" id="totalC_Post" class="trips-box" readonly style="background: #e2e8f0; color: #000;">
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+
+        <tbody id="sec5-body">
+            <tr class="section-header"><td colspan="5">5. PUMP OPERATIONS</td></tr>
+            <tr>
+                <td>5.1</td>
+                <td>Mine Dewatering</td>
+                <td><select><option>Active</option><option>Partial</option><option>Inactive</option></select></td>
+                <td><select><option>4 Pumps</option><option>3 Pumps</option><option>2 Pumps</option><option>1 Pump</option><option>0 Pumps</option></select></td>
+                <td><textarea placeholder="Pump locations/remarks..." oninput="autoResize(this)"></textarea></td>
+            </tr>
+        </tbody>
+
+        <tbody id="sec6-body">
+            <tr class="section-header"><td colspan="5">6. SHIFT HANDOVER</td></tr>
+            <tr>
+                <td>6.1</td>
+                <td>Handover Instructions</td>
+                <td colspan="3"><textarea placeholder="Critical instructions for the next shift supervisor..." oninput="autoResize(this)"></textarea></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Initialize Date
+    document.getElementById('reportDate').valueAsDate = new Date();
+
+    // Auto-Resize Textareas
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }
+
+    // Counter Widget Logic for Excavators
+    function updateCounter(inputId, change) {
+        const input = document.getElementById(inputId);
+        let currentVal = parseInt(input.value) || 0;
+        let newVal = currentVal + change;
+        if (newVal >= 0) { 
+            input.value = newVal; 
+        }
+    }
+
+    // Global "Other" Dialog Listener for ALL select menus
+    document.addEventListener('change', function(e) {
+        if (e.target.tagName === 'SELECT' && e.target.value === 'Other') {
+            let customVal = prompt("Please specify custom entry:");
+            if (customVal && customVal.trim() !== "") {
+                let newOption = document.createElement("option");
+                newOption.text = customVal;
+                newOption.value = customVal;
+                e.target.add(newOption, e.target.options[e.target.selectedIndex]);
+                e.target.value = customVal;
+            } else {
+                e.target.selectedIndex = 0; // fallback if cancelled or empty
+            }
+        }
+    });
+
+    // Toggle Shift C vs Shift A/B
+    function toggleShiftModes() {
+        const shift = document.getElementById('shiftSelect').value;
+        document.querySelectorAll('.shift-c-only').forEach(row => {
+            row.style.display = (shift === 'C') ? 'table-row' : 'none';
+        });
+        document.querySelectorAll('.shift-ab-only').forEach(row => {
+            row.style.display = (shift !== 'C') ? 'table-row' : 'none';
+        });
+    }
+    toggleShiftModes(); // Run once on load
+
+    // Calculate Trips Dynamically
+    function calcTrips(prefix) {
+        const k = parseInt(document.getElementById('kushmahi' + prefix).value) || 0;
+        const b = parseInt(document.getElementById('biratoli' + prefix).value) || 0;
+        document.getElementById('total' + prefix).value = k + b;
+    }
+
+    // Dynamic Seam Dropdown Multi-Add
+    function addSeam(btnElement) {
+        const container = btnElement.parentElement.parentElement;
+        const newGroup = document.createElement('div');
+        newGroup.className = 'seam-group';
+        newGroup.innerHTML = `
+            <select style="width: 80%;">
+                <option>Seam 7 Top</option><option>Seam 7 Bottom</option><option>Seam 7 Combined</option>
+                <option>Seam 5 Top</option><option>Seam 5 Bottom</option>
+                <option>Seam 3 Top</option><option>Seam 3 Middle</option><option>Seam 3 Bottom</option>
+                <option>Seam 2</option><option>Other</option>
+            </select>
+            <button class="btn btn-remove no-print" onclick="this.parentElement.remove()">-</button>
+        `;
+        container.appendChild(newGroup);
+    }
+
+    // Inject Stoppage Row
+    function injectBreakdown(presetReason, presetEqp, presetSec, presetStart, presetEnd) {
+        const reason = presetReason || document.getElementById('panel-reason').value;
+        const eqp = presetEqp || document.getElementById('panel-eqp').value;
+        const sectionId = presetSec || document.getElementById('panel-section').value;
+        const start = presetStart || document.getElementById('panel-start').value || "--:--";
+        const end = presetEnd || document.getElementById('panel-end').value || "--:--";
+        
+        let durText = "Pending";
+        if(start !== "--:--" && end !== "--:--") {
+            let d1 = new Date(`2000-01-01T${start}`);
+            let d2 = new Date(`2000-01-01T${end}`);
+            if (d2 < d1) d2.setDate(d2.getDate() + 1);
+            let diffMs = d2 - d1;
+            let diffHrs = Math.floor(diffMs / 3600000);
+            let diffMins = Math.round((diffMs % 3600000) / 60000);
+            durText = `${diffHrs}h ${diffMins}m`;
+        }
+
+        const tbody = document.getElementById(sectionId);
+        const row = document.createElement('tr');
+        row.className = 'breakdown-row';
+        row.innerHTML = `
+            <td style="color: #dc2626; font-weight: bold; text-align: center;">STOP</td>
+            <td><b>Reason:</b> ${reason}</td>
+            <td><b>Eqp:</b> ${eqp}</td>
+            <td><b>Dur:</b> ${durText} <br> <span style="font-size: 11px;">(${start} to ${end})</span></td>
+            <td><button class="btn btn-remove no-print" onclick="this.closest('tr').remove()">Remove Row</button></td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    // Global Blasting
+    function logGlobalBlasting() {
+        injectBreakdown('Blasting', 'All Coal Eqp', 'sec1-body', '14:00', '16:00');
+        injectBreakdown('Blasting', 'All OB Eqp', 'sec2-body', '14:00', '16:00');
+        injectBreakdown('Blasting', 'Crushers', 'sec3-body', '14:00', '16:00');
+        alert("Blasting logged automatically.");
+    }
+
+    // Print PREP: Strips borders and converts inputs/textareas to plain text
+    function prepareForPrint() {
+        document.querySelectorAll('input, select, textarea').forEach(el => {
+            if(el.type === 'button') return;
+            const span = document.createElement('span');
+            span.className = 'export-span';
+            span.innerText = el.value;
+            
+            // Format specifics
+            if (el.id === 'reportDate') span.innerText = el.value || 'Not Set';
+            if (el.id === 'exc-coal' || el.id === 'exc-ob') span.innerText = el.value + ' Excavators';
+            
+            span.style.fontWeight = (el.tagName === 'SELECT' && !el.closest('.seam-group')) || el.classList.contains('counter-val') ? 'bold' : 'normal';
+            span.style.color = '#1e293b'; // Default text color
+            
+            // Color Coding for Status
+            if (el.tagName === 'SELECT') {
+                if (el.value === 'Active') {
+                    span.style.color = '#059669'; // Green
+                } else if (el.value === 'Inactive') {
+                    span.style.color = '#dc2626'; // Red
+                } else if (el.value === 'Partial') {
+                    span.style.color = '#92400e'; // Light Brown
+                }
+            }
+            
+            el.style.display = 'none';
+            el.parentElement.insertBefore(span, el);
+        });
+        document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+    }
+
+    function restoreAfterPrint() {
+        document.querySelectorAll('.export-span').forEach(span => span.remove());
+        document.querySelectorAll('input, select, textarea').forEach(el => el.style.display = '');
+        document.querySelectorAll('.no-print').forEach(el => el.style.display = '');
+        toggleShiftModes(); 
+    }
+
+    // Export PDF
+    async function downloadPDF() {
+        prepareForPrint();
+        const element = document.getElementById('report-container');
+        const opt = { margin: 0.2, filename: 'Tubed_Shift_Report.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
+        await html2pdf().set(opt).from(element).save();
+        restoreAfterPrint();
+    }
+
+    // Export JPG
+    async function downloadJPG() {
+        prepareForPrint();
+        const element = document.getElementById('report-container');
+        const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#f0f2f5' });
+        const link = document.createElement('a');
+        link.download = 'Tubed_Shift_Report.jpg';
+        link.href = canvas.toDataURL('image/jpeg', 1.0);
+        link.click();
+        restoreAfterPrint();
+    }
+</script>
+
+</body>
+</html>
