@@ -36,7 +36,7 @@
   
   #attendance-card { width: 1000px; background: #ffffff; border: 2px solid #003366; margin: 0 auto; }
   .card-header { background-color: #0b3c68; color: #ffffff; text-align: center; font-size: 18px; font-weight: 700; padding: 10px 4px; letter-spacing: 0.5px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
   th { background-color: #145084; color: #ffffff; padding: 8px 4px; font-weight: 600; border-right: 1px solid #ffffff; text-align: center; }
   th:last-child { border-right: none; }
   td { border: 1px solid #d4dce4; padding: 6px 8px; color: #1a1a1a; }
@@ -45,6 +45,45 @@
   .status-present { background-color: #c6efce !important; color: #006100 !important; }
   .status-absent { background-color: #ffc7ce !important; color: #9c0006 !important; }
   .remark-input { width: 100%; border: 1px solid #cfd8dc; border-radius: 3px; padding: 4px; font-size: 12px; }
+
+  /* Reason cell: wraps text and grows the row height to fit */
+  td { word-wrap: break-word; overflow-wrap: break-word; }
+  .remark-cell { padding: 4px 6px; vertical-align: middle; }
+  .remark-box {
+    min-height: 20px; width: 100%; padding: 4px 5px; font-size: 12px; line-height: 1.45;
+    border: 1px solid #cfd8dc; border-radius: 3px; background: #fff; color: #1a1a1a;
+    white-space: pre-wrap; word-break: break-word; outline: none;
+  }
+  .remark-box:focus { border-color: #145084; background: #fffef7; }
+  .remark-box:empty:before { content: attr(data-placeholder); color: #90a4ae; }
+
+  /* Inline editable cells (section / name / designation) */
+  .cell-edit { outline: none; }
+  .cell-edit:hover { background: #fffde7; cursor: text; }
+  .cell-edit:focus { background: #fffef7; box-shadow: inset 0 0 0 2px #145084; }
+
+  /* Row / section edit controls - excluded from the exported image */
+  .action-col { text-align: center; padding: 4px 2px; }
+  .btn-row-remove {
+    background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; border-radius: 3px;
+    font-size: 13px; font-weight: bold; line-height: 1; padding: 3px 6px; cursor: pointer;
+  }
+  .btn-row-remove:active { background: #ef9a9a; color: #fff; }
+  .btn-remove-section { background-color: #c62828; color: #fff; font-weight: bold; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; height: 100%; }
+  .btn-remove-section:active { background-color: #8e0000; }
+  /* Static copy of the status pill - used only for the saved image, because
+     drop-downs are not drawn reliably when the card is converted to a JPG */
+  .status-print {
+    display: none; width: 100%; padding: 5px 4px; font-weight: 700; font-size: 12.5px;
+    line-height: 1.25; border-radius: 4px; border: 1px solid transparent; text-align: center;
+  }
+
+  #attendance-card td { vertical-align: middle; }
+  #attendance-card.exporting .action-col { display: none; }
+  #attendance-card.exporting .remark-box { border-color: transparent; background: transparent; }
+  #attendance-card.exporting .remark-box:empty:before { content: ""; }
+  #attendance-card.exporting .status-select { display: none; }
+  #attendance-card.exporting .status-print { display: block; }
   .card-footer { background-color: #dce6f1; color: #0b3c68; text-align: center; font-weight: 700; font-size: 13.5px; padding: 7px 0; border-top: 1px solid #b9cde5; }
   .extra-badge { font-size: 10px; color: #d32f2f; font-weight: bold; background: #ffcdd2; padding: 1px 4px; border-radius: 3px; margin-left: 4px; }
 </style>
@@ -80,7 +119,46 @@
       <button class="btn-add" onclick="addExtraEmployee()">+ Add</button>
     </div>
   </div>
-  
+
+  <div class="form-group" style="border-top: 1px solid #eceff1; padding-top: 12px; align-items: flex-end;">
+    <div class="form-item" style="flex: 1 1 100%; margin-bottom: 2px;">
+      <label style="color:#0b3c68; font-size:13.5px;">Add New Person (not in the list):</label>
+    </div>
+    <div class="form-item" style="flex: 1 1 170px;">
+      <label for="new-section">Section:</label>
+      <input type="text" id="new-section" list="section-list" placeholder="e.g. MINES">
+      <datalist id="section-list"></datalist>
+    </div>
+    <div class="form-item" style="flex: 1 1 170px;">
+      <label for="new-name">Employee Name:</label>
+      <input type="text" id="new-name" placeholder="Full name">
+    </div>
+    <div class="form-item" style="flex: 1 1 150px;">
+      <label for="new-desig">Designation:</label>
+      <input type="text" id="new-desig" placeholder="e.g. Overman">
+    </div>
+    <div class="form-item" style="flex: 0 0 110px;">
+      <button class="btn-add" onclick="addNewPerson()">+ Add Person</button>
+    </div>
+  </div>
+
+  <div class="form-group" style="border-top: 1px solid #eceff1; padding-top: 12px; align-items: flex-end;">
+    <div class="form-item" style="flex: 1 1 200px;">
+      <label for="remove-section">Remove a Section (deletes all its rows):</label>
+      <select id="remove-section">
+        <option value="">-- Select Section --</option>
+      </select>
+    </div>
+    <div class="form-item" style="flex: 0 0 130px;">
+      <button class="btn-remove-section" onclick="removeSection()">Remove Section</button>
+    </div>
+  </div>
+
+  <div style="font-size:12px; color:#607d8b; margin-top:10px; font-style:italic;">
+    Tip: click the &#10006; at the end of any row to remove that person. Section, name, designation and reason can be
+    edited directly in the sheet below. Changing the date or shift reloads the roster and clears these edits.
+  </div>
+
   <button class="btn-download" onclick="generateAndSaveJPG()">Save as JPG Image</button>
 </div>
 
@@ -90,12 +168,13 @@
     <table>
       <thead>
         <tr>
-          <th style="width: 20%;">Section</th>
-          <th style="width: 8%;">Shift</th>
-          <th style="width: 25%;">Employee Name</th>
-          <th style="width: 22%;">Designation</th>
-          <th style="width: 14%;">Attendance Status</th>
-          <th style="width: 11%;">Reason</th>
+          <th class="col-section" style="width: 14%;">Section</th>
+          <th class="col-shift" style="width: 5%;">Shift</th>
+          <th class="col-name" style="width: 20%;">Employee Name</th>
+          <th class="col-desig" style="width: 17%;">Designation</th>
+          <th class="col-status" style="width: 13%;">Attendance Status</th>
+          <th class="col-reason" style="width: 27%;">Reason</th>
+          <th class="action-col" style="width: 4%;">&#10006;</th>
         </tr>
       </thead>
       <tbody id="roster-tbody">
@@ -125,8 +204,10 @@ function updateRosterView() {
   const shiftVal = document.getElementById("report-shift").value;
   
   if (!dateVal || !ROSTER_DATA[dateVal]) {
-      document.getElementById("roster-tbody").innerHTML = '<tr><td colspan="6" class="center">No roster data available for this date.</td></tr>';
+      document.getElementById("roster-tbody").innerHTML = '<tr><td colspan="7" class="center">No roster data available for this date.</td></tr>';
       document.getElementById("footer-summary").innerHTML = "SUMMARY: Total = 0 | &#10004; Present = 0 | &#10008; Absent = 0";
+      refreshSectionLists();
+      adjustReasonWidth();
       return;
   }
 
@@ -146,21 +227,32 @@ function updateRosterView() {
   let count = 0;
 
   EMPLOYEES.forEach((emp, index) => {
-    if (dayShifts[index] === shiftVal) {
+    if (dayShifts[index] === shiftVal && !isHiddenSection(emp.loc)) {
       count++;
       appendEmployeeRow(emp, shiftVal, false);
     }
   });
   
   if (count === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" class="center">No employees assigned to ${shiftTitle} on this date.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="center">No employees assigned to ${shiftTitle} on this date.</td></tr>`;
   }
   
   calculateSummary();
+  refreshSectionLists();
+  adjustReasonWidth();
 }
 
 
 
+
+/* Sections left out of the sheet by default. Anyone from these sections can
+   still be brought in through the "Add Extra Employee" drop-down. */
+const DEFAULT_HIDDEN_SECTIONS = ["SIDING"];
+
+function isHiddenSection(loc) {
+    const name = (loc || "").trim().toUpperCase();
+    return DEFAULT_HIDDEN_SECTIONS.some(hidden => name.indexOf(hidden) === 0);
+}
 
 function getSectionRank(loc) {
     if (loc === "MINES") return 1;
@@ -184,17 +276,23 @@ function appendEmployeeRow(emp, shiftVal, isExtra) {
     tr.dataset.empId = emp.empId;
     
     tr.innerHTML = `
-      <td class="center">${emp.loc}</td>
+      <td class="center cell-edit" contenteditable="true" onpaste="pastePlainText(event)" oninput="syncRowSection(this)">${emp.loc}</td>
       <td class="center">${shiftVal}</td>
-      <td>${emp.name} ${extraBadge}</td>
-      <td>${emp.desig}</td>
+      <td class="cell-edit" contenteditable="true" onpaste="pastePlainText(event)">${emp.name} ${extraBadge}</td>
+      <td class="cell-edit" contenteditable="true" onpaste="pastePlainText(event)">${emp.desig}</td>
       <td>
         <select class="status-select status-present" onchange="handleStatusChange(this)">
           <option value="Present" selected>&#10004; Present</option>
           <option value="Absent">&#10008; Absent</option>
         </select>
+        <span class="status-print status-present">&#10004; Present</span>
       </td>
-      <td class="center"><input type="text" class="remark-input" placeholder="-"></td>
+      <td class="remark-cell">
+        <div class="remark-box" contenteditable="true" data-placeholder="-" onpaste="pastePlainText(event)" oninput="adjustReasonWidth()"></div>
+      </td>
+      <td class="action-col">
+        <button class="btn-row-remove" title="Remove this person" onclick="removeRow(this)">&#10006;</button>
+      </td>
     `;
     
     const rows = Array.from(tbody.querySelectorAll("tr"));
@@ -245,13 +343,155 @@ function addExtraEmployee() {
     if (emp) {
         appendEmployeeRow(emp, shiftVal, true);
         calculateSummary();
+        refreshSectionLists();
+        adjustReasonWidth();
         select.value = ""; // Reset dropdown
     }
 }
 
 
+/* ---------- Roster editing: add person, remove person, remove section ---------- */
+
+function addNewPerson() {
+    const secEl = document.getElementById("new-section");
+    const nameEl = document.getElementById("new-name");
+    const desigEl = document.getElementById("new-desig");
+
+    const name = nameEl.value.trim();
+    if (!name) {
+        alert("Please enter the employee name.");
+        nameEl.focus();
+        return;
+    }
+
+    const loc = secEl.value.trim().toUpperCase() || "MINES";
+    const desig = desigEl.value.trim() || "-";
+    const shiftVal = document.getElementById("report-shift").value;
+
+    // Place the new person at the end of their section
+    const emp = { sort: 9000 + document.querySelectorAll("#roster-tbody tr").length, loc: loc, name: name, desig: desig, empId: "NEW-" + Date.now() };
+
+    appendEmployeeRow(emp, shiftVal, true);
+    calculateSummary();
+    refreshSectionLists();
+    adjustReasonWidth();
+
+    nameEl.value = "";
+    desigEl.value = "";
+    nameEl.focus();
+}
+
+function removeRow(btn) {
+    const tr = btn.closest("tr");
+    if (!tr) return;
+    const name = tr.cells[2] ? tr.cells[2].textContent.trim() : "this person";
+    if (!confirm("Remove " + name + " from this attendance sheet?")) return;
+    tr.remove();
+    calculateSummary();
+    refreshSectionLists();
+    adjustReasonWidth();
+}
+
+function removeSection() {
+    const select = document.getElementById("remove-section");
+    const loc = select.value;
+    if (!loc) {
+        alert("Please select a section first.");
+        return;
+    }
+
+    const rows = Array.from(document.querySelectorAll("#roster-tbody tr"))
+        .filter(tr => (tr.dataset.loc || "") === loc);
+
+    if (!rows.length) {
+        alert("No rows found for " + loc + ".");
+        return;
+    }
+
+    if (!confirm("Remove section " + loc + " (" + rows.length + " person" + (rows.length > 1 ? "s" : "") + ")?")) return;
+
+    rows.forEach(tr => tr.remove());
+    select.value = "";
+    calculateSummary();
+    refreshSectionLists();
+    adjustReasonWidth();
+}
+
+function syncRowSection(cell) {
+    const tr = cell.closest("tr");
+    if (tr) tr.dataset.loc = cell.textContent.trim();
+    refreshSectionLists();
+    adjustReasonWidth();
+}
+
+function refreshSectionLists() {
+    // Sections currently in the sheet -> "Remove Section" dropdown
+    const present = [];
+    document.querySelectorAll("#roster-tbody tr").forEach(tr => {
+        const loc = (tr.dataset.loc || "").trim();
+        if (loc && present.indexOf(loc) === -1) present.push(loc);
+    });
+
+    const removeSel = document.getElementById("remove-section");
+    const keep = removeSel.value;
+    removeSel.innerHTML = '<option value="">-- Select Section --</option>';
+    present.forEach(loc => {
+        const opt = document.createElement("option");
+        opt.value = loc;
+        opt.textContent = loc;
+        removeSel.appendChild(opt);
+    });
+    if (present.indexOf(keep) !== -1) removeSel.value = keep;
+
+    // All known sections (master list + current sheet) -> "Add New Person" suggestions
+    const all = present.slice();
+    EMPLOYEES.forEach(e => { if (all.indexOf(e.loc) === -1) all.push(e.loc); });
+    const list = document.getElementById("section-list");
+    list.innerHTML = "";
+    all.sort().forEach(loc => {
+        const opt = document.createElement("option");
+        opt.value = loc;
+        list.appendChild(opt);
+    });
+}
+
+/* Column widths: the Reason column shrinks while every row's reason is blank,
+   and widens again as soon as any reason is typed. */
+const COL_WIDTHS_WITH_REASON = { section: 14, shift: 5, name: 20, desig: 17, status: 13, reason: 27 };
+const COL_WIDTHS_NO_REASON   = { section: 18, shift: 6, name: 24, desig: 21, status: 15, reason: 12 };
+
+function adjustReasonWidth() {
+    const boxes = document.querySelectorAll("#roster-tbody .remark-box");
+    let anyReason = false;
+    boxes.forEach(b => { if (b.textContent.trim() !== "") anyReason = true; });
+
+    const w = anyReason ? COL_WIDTHS_WITH_REASON : COL_WIDTHS_NO_REASON;
+    const head = document.querySelector("#attendance-card thead");
+    if (!head) return;
+
+    Object.keys(w).forEach(key => {
+        const th = head.querySelector(".col-" + key);
+        if (th) th.style.width = w[key] + "%";
+    });
+}
+
+function pastePlainText(e) {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData("text");
+    document.execCommand("insertText", false, text.replace(/\s*\n\s*/g, " "));
+}
+
 function handleStatusChange(sel) {
-  sel.className = sel.value === "Present" ? "status-select status-present" : "status-select status-absent";
+  const isPresent = sel.value === "Present";
+  sel.className = isPresent ? "status-select status-present" : "status-select status-absent";
+
+  // keep the static copy (used in the saved image) in step with the drop-down
+  const print = sel.parentNode.querySelector(".status-print");
+  if (print) {
+    print.className = isPresent ? "status-print status-present" : "status-print status-absent";
+    print.innerHTML = isPresent ? "&#10004; Present" : "&#10008; Absent";
+  }
+
   calculateSummary();
 }
 
@@ -271,11 +511,18 @@ function generateAndSaveJPG() {
   const dateVal = document.getElementById("report-date").value;
   const shiftVal = document.getElementById("report-shift").value;
 
+  // Hide the row-remove buttons so they don't appear in the saved image
+  element.classList.add("exporting");
+
   html2canvas(element, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
     const link = document.createElement("a");
     link.download = `Attendance_${dateVal}_Shift_${shiftVal}.jpg`;
     link.href = canvas.toDataURL("image/jpeg", 0.95);
     link.click();
+  }).catch(err => {
+    alert("Could not generate the image: " + err);
+  }).then(() => {
+    element.classList.remove("exporting");
   });
 }
 
