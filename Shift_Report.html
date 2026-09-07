@@ -46,7 +46,10 @@
         .shift-ab-only { display: table-row; background-color: #f8fafc; }
         .trips-container { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .trips-box { width: 70px; text-align: center; font-weight: bold; }
-        .seam-group { display: flex; align-items: center; margin-bottom: 5px; }
+        .seam-group { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+        .seam-group .seam-select { flex: 1 1 auto; min-width: 0; }
+        .seam-group .sector-select { flex: 0 0 115px; }
+        .counter-note { margin-top: 6px; font-size: 12px; padding: 5px; }
         .export-span { font-family: inherit; font-size: 14px; color: #1e293b; white-space: pre-wrap; word-break: break-word; }
         
         /* Counter Widget for Excavators */
@@ -144,18 +147,22 @@
                 <td>1.1</td>
                 <td>SM Production</td>
                 <td>
-                    <select><option>Active</option><option>Partial</option><option>Inactive</option></select>
+                    <select><option>Active</option><option>Partial</option><option>Inactive</option><option value="Other">Other (type custom)...</option></select>
                 </td>
                 <td>
-                    <select><option>3 SMs</option><option>2 SMs</option><option>1 SM</option><option>0 SMs</option></select>
+                    <select><option>3 SMs</option><option>2 SMs</option><option>1 SM</option><option>0 SMs</option><option value="Other">Other (type custom)...</option></select>
                 </td>
                 <td id="sm-remarks-cell">
                     <div class="seam-group">
-                        <select style="width: 80%;">
+                        <select class="seam-select">
                             <option>Seam 7 Top</option><option>Seam 7 Bottom</option><option>Seam 7 Combined</option>
                             <option>Seam 5 Top</option><option>Seam 5 Bottom</option>
                             <option>Seam 3 Top</option><option>Seam 3 Middle</option><option>Seam 3 Bottom</option>
-                            <option>Seam 2</option><option>Other</option>
+                            <option>Seam 2</option><option value="Other">Other (type custom)...</option>
+                        </select>
+                        <select class="sector-select">
+                            <option>Sector 1</option><option>Sector 2</option><option>Sector 3</option><option>Sector 4</option>
+                            <option value="Other">Other (type custom)...</option>
                         </select>
                         <button class="btn btn-add no-print" onclick="addSeam(this)">+</button>
                     </div>
@@ -164,13 +171,14 @@
             <tr>
                 <td>1.2</td>
                 <td>ROM Production</td>
-                <td><select><option>Active</option><option>Partial</option><option>Inactive</option></select></td>
+                <td><select><option>Active</option><option>Partial</option><option>Inactive</option><option value="Other">Other (type custom)...</option></select></td>
                 <td>
                     <div class="counter-widget">
                         <button class="btn btn-remove no-print" onclick="updateCounter('exc-coal', -1)">-</button>
                         <input type="text" id="exc-coal" value="5" readonly>
                         <button class="btn btn-add no-print" onclick="updateCounter('exc-coal', 1)">+</button>
                     </div>
+                    <input type="text" class="counter-note" placeholder="Custom note (optional)...">
                 </td>
                 <td><textarea placeholder="Locations..." oninput="autoResize(this)"></textarea></td>
             </tr>
@@ -181,21 +189,22 @@
             <tr>
                 <td>2.1</td>
                 <td>OB Excavation</td>
-                <td><select><option>Active</option><option>Partial</option><option>Inactive</option></select></td>
+                <td><select><option>Active</option><option>Partial</option><option>Inactive</option><option value="Other">Other (type custom)...</option></select></td>
                 <td>
                     <div class="counter-widget">
                         <button class="btn btn-remove no-print" onclick="updateCounter('exc-ob', -1)">-</button>
                         <input type="text" id="exc-ob" value="5" readonly>
                         <button class="btn btn-add no-print" onclick="updateCounter('exc-ob', 1)">+</button>
                     </div>
+                    <input type="text" class="counter-note" placeholder="Custom note (optional)...">
                 </td>
                 <td><textarea placeholder="Face remarks..." oninput="autoResize(this)"></textarea></td>
             </tr>
             <tr>
                 <td>2.2</td>
                 <td>OB Dumping</td>
-                <td><select><option>Active</option><option>Partial</option><option>Inactive</option></select></td>
-                <td><select><option>Standard Ops</option><option>Halted</option></select></td>
+                <td><select><option>Active</option><option>Partial</option><option>Inactive</option><option value="Other">Other (type custom)...</option></select></td>
+                <td><select><option>Standard Ops</option><option>Halted</option><option value="Other">Other (type custom)...</option></select></td>
                 <td><textarea placeholder="Dump area remarks..." oninput="autoResize(this)"></textarea></td>
             </tr>
         </tbody>
@@ -205,8 +214,8 @@
             <tr>
                 <td>3.1</td>
                 <td>ROM Crusher</td>
-                <td><select><option>Active</option><option>Partial</option><option>Inactive</option></select></td>
-                <td><select><option>2 Crushers</option><option>1 Crusher</option><option>0 Crushers</option></select></td>
+                <td><select><option>Active</option><option>Partial</option><option>Inactive</option><option value="Other">Other (type custom)...</option></select></td>
+                <td><select><option>2 Crushers</option><option>1 Crusher</option><option>0 Crushers</option><option value="Other">Other (type custom)...</option></select></td>
                 <td><textarea placeholder="Remarks..." oninput="autoResize(this)"></textarea></td>
             </tr>
         </tbody>
@@ -216,8 +225,8 @@
             <tr>
                 <td>4.1</td>
                 <td>Coal Dispatch Status</td>
-                <td><select><option>Active</option><option>Partial</option><option>Inactive</option></select></td>
-                <td><select><option>Ongoing</option><option>Halted</option></select></td>
+                <td><select><option>Active</option><option>Partial</option><option>Inactive</option><option value="Other">Other (type custom)...</option></select></td>
+                <td><select><option>Ongoing</option><option>Halted</option><option value="Other">Other (type custom)...</option></select></td>
                 <td><textarea placeholder="Remarks..." oninput="autoResize(this)"></textarea></td>
             </tr>
             
@@ -271,8 +280,8 @@
             <tr>
                 <td>5.1</td>
                 <td>Mine Dewatering</td>
-                <td><select><option>Active</option><option>Partial</option><option>Inactive</option></select></td>
-                <td><select><option>4 Pumps</option><option>3 Pumps</option><option>2 Pumps</option><option>1 Pump</option><option>0 Pumps</option></select></td>
+                <td><select><option>Active</option><option>Partial</option><option>Inactive</option><option value="Other">Other (type custom)...</option></select></td>
+                <td><select><option>4 Pumps</option><option>3 Pumps</option><option>2 Pumps</option><option>1 Pump</option><option>0 Pumps</option><option value="Other">Other (type custom)...</option></select></td>
                 <td><textarea placeholder="Pump locations/remarks..." oninput="autoResize(this)"></textarea></td>
             </tr>
         </tbody>
@@ -349,11 +358,15 @@
         const newGroup = document.createElement('div');
         newGroup.className = 'seam-group';
         newGroup.innerHTML = `
-            <select style="width: 80%;">
+            <select class="seam-select">
                 <option>Seam 7 Top</option><option>Seam 7 Bottom</option><option>Seam 7 Combined</option>
                 <option>Seam 5 Top</option><option>Seam 5 Bottom</option>
                 <option>Seam 3 Top</option><option>Seam 3 Middle</option><option>Seam 3 Bottom</option>
-                <option>Seam 2</option><option>Other</option>
+                <option>Seam 2</option><option value="Other">Other (type custom)...</option>
+            </select>
+            <select class="sector-select">
+                <option>Sector 1</option><option>Sector 2</option><option>Sector 3</option><option>Sector 4</option>
+                <option value="Other">Other (type custom)...</option>
             </select>
             <button class="btn btn-remove no-print" onclick="this.parentElement.remove()">-</button>
         `;
@@ -411,6 +424,7 @@
             // Format specifics
             if (el.id === 'reportDate') span.innerText = el.value || 'Not Set';
             if (el.id === 'exc-coal' || el.id === 'exc-ob') span.innerText = el.value + ' Excavators';
+            if (el.classList.contains('sector-select')) span.innerText = '· ' + el.value;
             
             span.style.fontWeight = (el.tagName === 'SELECT' && !el.closest('.seam-group')) || el.classList.contains('counter-val') ? 'bold' : 'normal';
             span.style.color = '#1e293b'; // Default text color
