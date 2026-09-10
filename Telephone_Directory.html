@@ -528,9 +528,7 @@
         '<h1>TELEPHONE DIRECTORY</h1>' +
         '<p class="org">' + esc(OFFICE.org) + ' &nbsp;·&nbsp; ' + esc(OFFICE.unit) + '</p>' +
         '<p class="addr">' + esc(OFFICE.line) + '</p>' +
-      '</div>' +
-      '<div class="stats">Consolidated directory<br><b>' + totalContacts() + ' contacts</b><br>' +
-        DATA.length + ' sections</div>');
+      '</div>');
   }
   function runheadNode(){
     return el('div', 'runhead',
@@ -541,7 +539,7 @@
   function footNode(){
     return el('div', 'page-foot',
       '<span>' + esc(OFFICE.org) + ' · ' + esc(OFFICE.unit) + ' · ' + esc(OFFICE.street) +
-      ', ' + esc(OFFICE.city) + ' — ' + esc(OFFICE.pin) + '</span>' +
+      ', ' + esc(OFFICE.city) + ' - ' + esc(OFFICE.pin) + '</span>' +
       '<span class="pageno"></span>');
   }
   function pageNode(index, cols){
