@@ -6,6 +6,9 @@
     <title>Tubed Mine - Daily Shift Report</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- duty roster data + resolver: edit roster-config.js, never this page -->
+    <script src="roster-config.js"></script>
+    <script src="roster-engine.js"></script>
     
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; }
@@ -49,6 +52,10 @@
         .seam-group { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
         .seam-group .seam-select { flex: 1 1 auto; min-width: 0; }
         .seam-group .sector-select { flex: 0 0 115px; }
+        .seam-group .trip-input { flex: 0 0 82px; text-align: center; }
+        .seam-total { margin-top: 7px; padding-top: 6px; border-top: 1px dashed #cbd5e1; font-size: 13.5px; font-weight: 600; color: #1a365d; }
+        .seam-total span { font-size: 15px; }
+        .incharge-hint { display: block; margin-top: 4px; font-size: 12px; color: #64748b; font-style: italic; }
         .counter-note { margin-top: 6px; font-size: 12px; padding: 5px; }
         .export-span { font-family: inherit; font-size: 14px; color: #1e293b; white-space: pre-wrap; word-break: break-word; }
         
@@ -56,12 +63,63 @@
         .counter-widget { display: flex; align-items: center; justify-content: flex-start; gap: 5px; }
         .counter-widget input { width: 45px; text-align: center; font-weight: bold; padding: 5px; background: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 4px; pointer-events: none; }
         
+        /* ===================== responsive =====================
+           The page lays out properly on a phone, a tablet and a desktop.
+           For the JPG/PDF the report is temporarily forced back to its full
+           1050px desktop width (class .force-desktop), so a picture saved on
+           a phone is identical to one saved on a PC. Every mobile rule below
+           is written with :not(.force-desktop) so the capture ignores them. */
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        #report-container.force-desktop { width: 1050px; max-width: none; padding: 40px; }
+        #report-container.force-desktop .table-wrap { overflow: visible; }
+        .toolbar-actions { text-align: center; margin-bottom: 20px; }
+
+        @media (max-width: 860px) {
+            body { padding: 10px; }
+            .toolbar-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+            .toolbar-actions .btn { width: 100%; margin: 0; padding: 12px 8px; }
+            .toolbar-actions .btn-blasting { grid-column: 1 / -1; }
+
+            #report-container:not(.force-desktop) { padding: 18px 14px; }
+            #report-container:not(.force-desktop) h2 { font-size: 19px; letter-spacing: .5px; }
+            #report-container:not(.force-desktop) h4 { font-size: 13px; margin-bottom: 16px; }
+            #report-container:not(.force-desktop) input,
+            #report-container:not(.force-desktop) select,
+            #report-container:not(.force-desktop) textarea { font-size: 16px; }
+
+            /* date / shift / incharge become stacked cards */
+            #report-container:not(.force-desktop) .meta-table,
+            #report-container:not(.force-desktop) .meta-table tbody,
+            #report-container:not(.force-desktop) .meta-table tr,
+            #report-container:not(.force-desktop) .meta-table td { display: block; width: auto !important; }
+            #report-container:not(.force-desktop) .meta-table tr {
+                border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+            #report-container:not(.force-desktop) .meta-table td { border: none; padding: 4px 0; }
+            #report-container:not(.force-desktop) .meta-table select { width: 100% !important; }
+
+            /* the operations grid keeps its columns and scrolls sideways */
+            #report-container:not(.force-desktop) .ops-table { min-width: 720px; }
+
+            /* stoppage panel: one control per line */
+            #report-container:not(.force-desktop) .stoppage-panel { gap: 8px; padding: 12px 14px; }
+            #report-container:not(.force-desktop) .stoppage-panel select,
+            #report-container:not(.force-desktop) .stoppage-panel input[type="time"] { width: 100% !important; }
+            #report-container:not(.force-desktop) .stoppage-panel .btn { width: 100%; }
+        }
+
+        @media (max-width: 520px) {
+            .toolbar-actions { grid-template-columns: 1fr; }
+            #report-container:not(.force-desktop) .seam-group { flex-wrap: wrap; }
+            #report-container:not(.force-desktop) .seam-group .sector-select { flex: 1 1 120px; }
+            #report-container:not(.force-desktop) .seam-group .trip-input { flex: 1 1 90px; }
+        }
+
         @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body>
 
-<div class="no-print" style="text-align: center; margin-bottom: 20px;">
+<div class="no-print toolbar-actions">
     <button class="btn btn-export" onclick="downloadPDF()">⬇ Download PDF</button>
     <button class="btn btn-export" onclick="downloadJPG()">⬇ Download JPG</button>
     <button class="btn btn-blasting" onclick="logGlobalBlasting()">🧨 Log Daily Blasting (2 PM - 4 PM)</button>
@@ -71,7 +129,7 @@
     <h2>DAILY SHIFT REPORT - TUBED COAL MINE</h2>
     <h4>Operations & Equipment Status Log</h4>
 
-    <table>
+    <table class="meta-table">
         <tr>
             <td width="15%"><b>Date:</b></td>
             <td width="35%"><input type="date" id="reportDate"></td>
@@ -87,13 +145,10 @@
         <tr>
             <td><b>Shift Incharge:</b></td>
             <td colspan="3">
-                <select id="shiftIncharge" style="width: 50%;">
-                    <option value="Rahul Kumar - 86">Rahul Kumar - 86</option>
-                    <option value="Rahul Kumar - 91">Rahul Kumar - 91</option>
-                    <option value="Prasanjeet Kumar">Prasanjeet Kumar</option>
-                    <option value="P. Amar Rathod">P. Amar Rathod</option>
-                    <option value="Other">Other</option>
+                <select id="shiftIncharge" style="width: 50%;" onchange="markInchargeManual()">
+                    <option value="Other">Other (type custom)...</option>
                 </select>
+                <span class="incharge-hint no-print" id="inchargeHint"></span>
             </td>
         </tr>
     </table>
@@ -130,7 +185,8 @@
         <button class="btn" style="background-color: #d97706;" onclick="injectBreakdown()">+ Add Stoppage</button>
     </div>
 
-    <table>
+    <div class="table-wrap">
+    <table class="ops-table">
         <thead>
             <tr>
                 <th width="5%">SL</th>
@@ -164,8 +220,10 @@
                             <option>Sector 1</option><option>Sector 2</option><option>Sector 3</option><option>Sector 4</option>
                             <option value="Other">Other (type custom)...</option>
                         </select>
+                        <input type="number" class="trip-input" min="0" step="1" placeholder="Trips" title="Trips from this seam / sector (optional)" oninput="calcSeamTrips()">
                         <button class="btn btn-add no-print" onclick="addSeam(this)">+</button>
                     </div>
+                    <div class="seam-total" id="seamTripTotal" style="display:none;">Total Trips: <span id="seamTripTotalVal">0</span></div>
                 </td>
             </tr>
             <tr>
@@ -295,11 +353,84 @@
             </tr>
         </tbody>
     </table>
+    </div>
 </div>
 
 <script>
     // Initialize Date
     document.getElementById('reportDate').valueAsDate = new Date();
+
+    /* ==============================================================
+       SHIFT INCHARGE - options and the suggestion both come from the
+       duty roster in roster-config.js. Picking a date or a shift fills
+       in whoever is on that shift (the Dy. Manager if there is one,
+       otherwise the ET); it can always be changed by hand afterwards.
+       ============================================================== */
+    /* Who may be shift incharge, best first: Dy. Manager, then ET.
+       Plain string tests - no regular expressions to get mangled. */
+    function isDyManager(desig) {
+        return String(desig).toLowerCase().indexOf('dy. manager') === 0 ||
+               String(desig).toLowerCase().indexOf('dy manager') === 0;
+    }
+    function isET(desig) {
+        var d = String(desig).trim().toUpperCase();
+        return d === 'ET' || d.indexOf('ET ') === 0 || d.indexOf('ET(') === 0;
+    }
+    function rankOf(emp) {
+        if (isDyManager(emp.desig)) return 0;
+        if (isET(emp.desig)) return 1;
+        return 9;
+    }
+    function inchargeCandidates() {
+        if (!window.RosterEngine) return [];
+        return RosterEngine.employees().filter(function (e) { return rankOf(e) < 9; });
+    }
+
+    function buildInchargeOptions() {
+        const sel = document.getElementById('shiftIncharge');
+        const people = inchargeCandidates();
+        sel.innerHTML = '';
+        people.forEach(e => {
+            const o = document.createElement('option');
+            o.value = e.name;
+            o.textContent = e.name + ' — ' + e.desig;
+            sel.appendChild(o);
+        });
+        const other = document.createElement('option');
+        other.value = 'Other';
+        other.textContent = 'Other (type custom)...';
+        sel.appendChild(other);
+    }
+
+    let inchargeTouched = false;            // set once the user picks someone themselves
+    function markInchargeManual() { inchargeTouched = true; }
+
+    function updateShiftIncharge() {
+        const sel = document.getElementById('shiftIncharge');
+        const hint = document.getElementById('inchargeHint');
+        const date = document.getElementById('reportDate').value;
+        const shift = document.getElementById('shiftSelect').value;
+        if (!window.RosterEngine || !date) { hint.textContent = ''; return; }
+
+        const onDuty = inchargeCandidates()
+            .filter(e => RosterEngine.shiftFor(e.id, date) === shift)
+            .sort((a, b) => rankOf(a) - rankOf(b));
+
+        if (!onDuty.length) {
+            if (!inchargeTouched) sel.value = 'Other';
+            hint.textContent = 'No Dy. Manager / ET on the duty roster for shift ' + shift +
+                               ' on this date — please choose one above.';
+            return;
+        }
+
+        // keep a hand-picked name if it is still valid for this shift
+        const keep = inchargeTouched && onDuty.some(e => e.name === sel.value);
+        if (!keep) sel.value = onDuty[0].name;
+
+        const others = onDuty.filter(e => e.name !== sel.value).map(e => e.name);
+        hint.textContent = 'From duty roster — ' + onDuty[0].desig + ' on shift ' + shift +
+            (others.length ? ' · also on duty: ' + others.join(', ') : '');
+    }
 
     // Auto-Resize Textareas
     function autoResize(textarea) {
@@ -336,6 +467,7 @@
     // Toggle Shift C vs Shift A/B
     function toggleShiftModes() {
         const shift = document.getElementById('shiftSelect').value;
+        if (typeof updateShiftIncharge === 'function') updateShiftIncharge();
         document.querySelectorAll('.shift-c-only').forEach(row => {
             row.style.display = (shift === 'C') ? 'table-row' : 'none';
         });
@@ -343,7 +475,14 @@
             row.style.display = (shift !== 'C') ? 'table-row' : 'none';
         });
     }
+    document.getElementById('reportDate').addEventListener('change', function () {
+        inchargeTouched = false;            // a new date starts from the roster again
+        updateShiftIncharge();
+    });
+
+    buildInchargeOptions();
     toggleShiftModes(); // Run once on load
+    updateShiftIncharge();
 
     // Calculate Trips Dynamically
     function calcTrips(prefix) {
@@ -368,9 +507,27 @@
                 <option>Sector 1</option><option>Sector 2</option><option>Sector 3</option><option>Sector 4</option>
                 <option value="Other">Other (type custom)...</option>
             </select>
-            <button class="btn btn-remove no-print" onclick="this.parentElement.remove()">-</button>
+            <input type="number" class="trip-input" min="0" step="1" placeholder="Trips" title="Trips from this seam / sector (optional)" oninput="calcSeamTrips()">
+            <button class="btn btn-remove no-print" onclick="removeSeam(this)">-</button>
         `;
-        container.appendChild(newGroup);
+        container.insertBefore(newGroup, document.getElementById('seamTripTotal'));  // total stays last
+        calcSeamTrips();
+    }
+
+    function removeSeam(btnElement) {
+        btnElement.parentElement.remove();
+        calcSeamTrips();
+    }
+
+    /* Trips are optional - the total only appears once a figure is entered. */
+    function calcSeamTrips() {
+        let total = 0, filled = 0;
+        document.querySelectorAll('#sm-remarks-cell .trip-input').forEach(inp => {
+            const v = parseInt(inp.value, 10);
+            if (!isNaN(v)) { total += v; filled++; }
+        });
+        document.getElementById('seamTripTotalVal').textContent = total;
+        document.getElementById('seamTripTotal').style.display = filled ? 'block' : 'none';
     }
 
     // Inject Stoppage Row
@@ -425,6 +582,7 @@
             if (el.id === 'reportDate') span.innerText = el.value || 'Not Set';
             if (el.id === 'exc-coal' || el.id === 'exc-ob') span.innerText = el.value + ' Excavators';
             if (el.classList.contains('sector-select')) span.innerText = '· ' + el.value;
+            if (el.classList.contains('trip-input')) span.innerText = el.value ? '· ' + el.value + ' trips' : '';
             
             span.style.fontWeight = (el.tagName === 'SELECT' && !el.closest('.seam-group')) || el.classList.contains('counter-val') ? 'bold' : 'normal';
             span.style.color = '#1e293b'; // Default text color
@@ -453,25 +611,72 @@
         toggleShiftModes(); 
     }
 
+    /* Lock the report to its full desktop width for the duration of a capture,
+       so the saved image/PDF is the same whatever device it came from. */
+    function beginDesktopCapture() {
+        const el = document.getElementById('report-container');
+        el.classList.add('force-desktop');
+        window.scrollTo(0, 0);
+        return el;
+    }
+    function endDesktopCapture() {
+        document.getElementById('report-container').classList.remove('force-desktop');
+    }
+
+    function reportFileName(ext) {
+        const d = document.getElementById('reportDate').value || 'report';
+        const sh = document.getElementById('shiftSelect').value;
+        return 'Tubed_Shift_Report_' + d + '_Shift_' + sh + '.' + ext;
+    }
+
     // Export PDF
     async function downloadPDF() {
         prepareForPrint();
-        const element = document.getElementById('report-container');
-        const opt = { margin: 0.2, filename: 'Tubed_Shift_Report.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
-        await html2pdf().set(opt).from(element).save();
-        restoreAfterPrint();
+        const element = beginDesktopCapture();
+        try {
+            const opt = {
+                margin: 0.2,
+                filename: reportFileName('pdf'),
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 1300, scrollX: 0, scrollY: 0,
+                               width: element.offsetWidth, height: element.offsetHeight },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            await html2pdf().set(opt).from(element).save();
+        } catch (err) {
+            console.error(err);
+            alert('Could not generate the PDF: ' + err);
+        } finally {
+            endDesktopCapture();
+            restoreAfterPrint();
+        }
     }
 
     // Export JPG
     async function downloadJPG() {
         prepareForPrint();
-        const element = document.getElementById('report-container');
-        const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#f0f2f5' });
-        const link = document.createElement('a');
-        link.download = 'Tubed_Shift_Report.jpg';
-        link.href = canvas.toDataURL('image/jpeg', 1.0);
-        link.click();
-        restoreAfterPrint();
+        const element = beginDesktopCapture();
+        try {
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                width: element.offsetWidth,
+                height: element.offsetHeight,
+                windowWidth: 1300,
+                scrollX: 0,
+                scrollY: 0
+            });
+            const link = document.createElement('a');
+            link.download = reportFileName('jpg');
+            link.href = canvas.toDataURL('image/jpeg', 0.95);
+            link.click();
+        } catch (err) {
+            console.error(err);
+            alert('Could not generate the image: ' + err);
+        } finally {
+            endDesktopCapture();
+            restoreAfterPrint();
+        }
     }
 </script>
 
