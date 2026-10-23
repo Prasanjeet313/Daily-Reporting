@@ -583,6 +583,31 @@
             if (el.id === 'exc-coal' || el.id === 'exc-ob') span.innerText = el.value + ' Excavators';
             if (el.classList.contains('sector-select')) span.innerText = '· ' + el.value;
             if (el.classList.contains('trip-input')) span.innerText = el.value ? '· ' + el.value + ' trips' : '';
+
+            /* Shift incharge prints with the designation, e.g.
+               "Kumar Ankit — Dy. Manager (Mining)" */
+            if (el.id === 'shiftIncharge') {
+                span.innerText = '';
+                if (el.value === 'Other' || !el.value) {
+                    span.innerText = '—';
+                } else {
+                    var desig = '';
+                    if (window.RosterEngine) {
+                        var match = RosterEngine.employees().filter(function (x) { return x.name === el.value; })[0];
+                        if (match) desig = match.desig;
+                    }
+                    var who = document.createElement('b');
+                    who.textContent = el.value;
+                    span.appendChild(who);
+                    if (desig) {
+                        var role = document.createElement('span');
+                        role.style.fontWeight = '400';
+                        role.style.color = '#475569';
+                        role.textContent = ' — ' + desig;
+                        span.appendChild(role);
+                    }
+                }
+            }
             
             span.style.fontWeight = (el.tagName === 'SELECT' && !el.closest('.seam-group')) || el.classList.contains('counter-val') ? 'bold' : 'normal';
             span.style.color = '#1e293b'; // Default text color
