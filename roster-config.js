@@ -924,10 +924,10 @@ window.ROSTER_CONFIG = {
       sections: ["TUBED COAL MINES", "KHUSMAHI SIDING", "BIRATOLI SIDING", "NAWADA CHOWK"],
       people: [
         { id: "HG-01", name: "Suryadev Singh",          desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "" },
-        { id: "HG-02", name: "Vijay Oraon",             desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "" },
-        { id: "HG-03", name: "Shyamdev Singh",          desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "" },
-        { id: "HG-04", name: "Chandan Tigga",           desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "" },
-        { id: "HG-05", name: "Raju Singh",              desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "" },
+        { id: "HG-02", name: "Vijay Oraon",             desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "6299801798" },
+        { id: "HG-03", name: "Shyamdev Singh",          desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "7870012654" },
+        { id: "HG-04", name: "Chandan Tigga",           desig: "Home Guard",                      section: "TUBED COAL MINES", phone: " 8148700360" },
+        { id: "HG-05", name: "Raju Singh",              desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "8709801299" },
         { id: "HG-06", name: "Pradeep Thakur",          desig: "Home Guard",                      section: "KHUSMAHI SIDING", phone: "9142673585" },
         { id: "HG-07", name: "Anand Thakur",            desig: "Home Guard",                      section: "KHUSMAHI SIDING", phone: "9334737341" },
         { id: "HG-08", name: "Shiv Narayan Yadav",      desig: "Home Guard",                      section: "KHUSMAHI SIDING", phone: "9060849457" },
@@ -940,11 +940,11 @@ window.ROSTER_CONFIG = {
         { id: "HG-15", name: "Rajesh Kumar",            desig: "Home Guard",                      section: "NAWADA CHOWK", phone: "8603982030" },
         { id: "HG-16", name: "Awadesh Singh",           desig: "Home Guard",                      section: "NAWADA CHOWK", phone: "8084793507" },
         { id: "HG-17", name: "Nandani Kumari",          desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "" },
-        { id: "HG-18", name: "Sarita Kumari",           desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "" },
-        { id: "HG-19", name: "Phudo Devi",              desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "" },
-        { id: "HG-20", name: "Asrita Devi",             desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "" },
-        { id: "HG-21", name: "Kiran Pana",              desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "" },
-        { id: "HG-22", name: "Binita Kumari",           desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "" }
+        { id: "HG-18", name: "Sarita Kumari",           desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "8580280953" },
+        { id: "HG-19", name: "Phudo Devi",              desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "8294015710" },
+        { id: "HG-20", name: "Asrita Devi",             desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "9334538138" },
+        { id: "HG-21", name: "Kiran Pana",              desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "8252981610" },
+        { id: "HG-22", name: "Binita Kumari",           desig: "Home Guard",                      section: "TUBED COAL MINES", phone: "7091079106" }
       ],
       rosterBlocks: [
         { id: "home-guard-roster",
