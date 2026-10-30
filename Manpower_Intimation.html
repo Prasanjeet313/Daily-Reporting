@@ -184,11 +184,32 @@
   /* The report is always laid out at its full desktop width (1100px), so the
      JPG/PDF come out the same size from a phone as from a PC; small screens
      just scale the view down. */
+  /* crew selector tiles */
+  .crew-tiles{
+    max-width:1100px; margin:0 auto 14px auto;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+  }
+  .crew-tile{
+    background:#fff; border:1px solid #cfd8e3; border-top:3px solid #cfd8e3;
+    border-radius:8px; padding:11px 14px; cursor:pointer; text-align:left;
+    font-family:inherit; color:#222; transition:.15s;
+    box-shadow:0 1px 4px rgba(0,0,0,.08);
+  }
+  .crew-tile:hover{ border-color:#9fb3cd; box-shadow:0 2px 8px rgba(0,0,0,.14); }
+  .crew-tile .ct-name{ display:block; font-size:14.5px; font-weight:bold; color:var(--navy); }
+  .crew-tile .ct-meta{ display:block; margin-top:3px; font-size:11.5px; color:#6b7684; }
+  .crew-tile.active{
+    border-color:var(--navy); border-top-color:var(--navy);
+    background:#f3f7fd; box-shadow:0 3px 10px rgba(31,56,100,.18);
+  }
+  .crew-tile.active .ct-meta{ color:#44566e; }
+
   .report-wrap{ overflow-x:auto; }
   .report-scaler{ width:1100px; transform-origin:top left; margin:0 auto; }
   .fit-note{ display:none; max-width:1100px; margin:0 auto 8px; font-size:12px; color:#667; font-style:italic; }
 
   @media (max-width:900px){
+    .crew-tiles{ grid-template-columns:1fr; gap:8px; }
     body{ padding:12px; }
     .toolbar{ flex-direction:column; align-items:stretch; gap:8px; }
     .toolbar .left,.toolbar .right{ width:100%; }
@@ -203,6 +224,8 @@
 </style>
 </head>
 <body>
+
+  <div class="crew-tiles no-print" id="crewTiles"></div>
 
   <div class="toolbar">
     <div class="left">
@@ -231,7 +254,7 @@
         <col><col><col><col><col>
       </colgroup>
       <tr>
-        <th>TOTAL</th><th>SHIFT A</th><th>SHIFT B</th><th>SHIFT C</th><th>G.S</th><th>OFF / REST</th>
+        <th>TOTAL</th><th>SHIFT A</th><th>SHIFT B</th><th>SHIFT C</th><th>G.S</th><th class="col-off">OFF / REST</th>
       </tr>
       <tr>
         <td contenteditable="true" id="qvTOTAL">0</td>
@@ -239,7 +262,7 @@
         <td contenteditable="true" id="qvB">0</td>
         <td contenteditable="true" id="qvC">0</td>
         <td contenteditable="true" id="qvG">0</td>
-        <td contenteditable="true" id="qvOFF">0</td>
+        <td contenteditable="true" id="qvOFF" class="col-off">0</td>
       </tr>
     </table>
 
@@ -255,7 +278,7 @@
           <th>SHIFT B<br><span style="font-weight:normal;">(14:00-22:00)</span></th>
           <th>SHIFT C<br><span style="font-weight:normal;">(22:00-06:00)</span></th>
           <th>G.S<br><span style="font-weight:normal;">(General Shift)</span></th>
-          <th>OFF / REST</th>
+          <th class="col-off">OFF / REST</th>
         </tr>
       </thead>
       <tbody id="gridBody">
@@ -268,19 +291,60 @@
           <td contenteditable="true" id="totB">0</td>
           <td contenteditable="true" id="totC">0</td>
           <td contenteditable="true" id="totG">0</td>
-          <td contenteditable="true" id="totOFF">0</td>
+          <td contenteditable="true" id="totOFF" class="col-off">0</td>
         </tr>
       </tfoot>
     </table>
+
+    <div class="footnote" id="dutyNote" style="display:none;"></div>
 
   </div>
   </div>
   </div>
 
 <script>
-const EMPLOYEES = RosterEngine.employees();           // from roster-config.js
-const SHIFTS_BY_DATE = RosterEngine.shiftsByDate();   // from roster-config.js
-const LOCS = RosterEngine.sections();                 // from roster-config.js
+/* Three crews work the mine: DVC staff, Home Guards and Drivers. The tiles
+   switch between them; all three use this same report template. */
+let CREW = RosterEngine.crew('dvc');                  // default selection
+let EMPLOYEES = CREW.employees();
+let SHIFTS_BY_DATE = CREW.shiftsByDate();
+let LOCS = CREW.sections;
+
+function fmtPhone(num){
+  const d = String(num || '').replace(/\D/g, '');
+  return d.length === 10 ? d.slice(0,5) + ' ' + d.slice(5) : (d || '');
+}
+
+function fmtShort(iso){
+  const p = String(iso).split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso;
+}
+
+function buildCrewTiles(){
+  const box = document.getElementById('crewTiles');
+  box.innerHTML = '';
+  RosterEngine.crews().forEach(c => {
+    const r = c.dateRange();
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'crew-tile' + (c.id === CREW.id ? ' active' : '');
+    b.onclick = function(){ selectCrew(c.id); };
+    b.innerHTML = '<span class="ct-name">' + c.label + '</span>' +
+                  '<span class="ct-meta">' + c.employees().length + ' persons &middot; ' +
+                  c.sections.length + ' locations<br>roster ' + fmtShort(r.from) + ' – ' + fmtShort(r.to) + '</span>';
+    box.appendChild(b);
+  });
+}
+
+function selectCrew(id){
+  CREW = RosterEngine.crew(id);
+  EMPLOYEES = CREW.employees();
+  SHIFTS_BY_DATE = CREW.shiftsByDate();
+  LOCS = CREW.sections;
+  buildCrewTiles();
+  buildReport(document.getElementById('datePick').value);
+  fitReport();
+}
 const SHIFT_COLS = ['A','B','C','G.S','OFF'];
 
 function fmtDate(iso){
@@ -303,13 +367,39 @@ function buildReport(dateIso){
   const shiftArr = SHIFTS_BY_DATE[dateIso];
   const {display, day} = fmtDate(dateIso);
   document.getElementById('subtitleLine').innerHTML =
-    'PLANNED MANPOWER DEPLOYMENT&nbsp;&nbsp;|&nbsp;&nbsp;DATE: '+display+' ('+day+')';
+    CREW.reportTitle+'&nbsp;&nbsp;|&nbsp;&nbsp;DATE: '+display+' ('+day+')';
 
   if(!shiftArr){
+    const r = CREW.dateRange();
     document.getElementById('gridBody').innerHTML =
-      '<tr><td colspan="6" style="text-align:center;color:#900;">No roster data available for this date.</td></tr>';
+      '<tr><td colspan="' + (CREW.restColumn ? 6 : 5) + '" style="text-align:center;color:#900;">No ' + CREW.label +
+      ' roster for this date. &nbsp;The published roster covers ' +
+      fmtShort(r.from) + ' to ' + fmtShort(r.to) + '.</td></tr>';
+    ['qvA','qvB','qvC','qvG','qvOFF','qvTOTAL','totA','totB','totC','totG','totOFF']
+      .forEach(id => document.getElementById(id).textContent = '0');
+    document.getElementById('dutyNote').style.display = 'none';
     return;
   }
+
+  /* Crews that work every day (home guards, drivers) have no rest day,
+     so their report drops the OFF / REST column entirely. */
+  const COLS = CREW.restColumn ? SHIFT_COLS : SHIFT_COLS.filter(s => s !== 'OFF');
+  document.querySelectorAll('.col-off').forEach(el=>{
+    el.style.display = CREW.restColumn ? '' : 'none';
+  });
+  /* The colgroup still holds a <col> for the dropped column, which would keep
+     reserving its slice and leave the tables short of the title bar. Share the
+     width out over the columns that are actually showing. */
+  document.querySelectorAll('#qvTable colgroup, #gridTable colgroup').forEach(cg=>{
+    const cols = cg.querySelectorAll('col');
+    const rest = CREW.restColumn ? '' : (84 / (cols.length - 2)).toFixed(3) + '%';
+    cols.forEach((c, i)=>{
+      if(i === 0){ c.style.width = '16%'; c.style.display = ''; return; }
+      const dropped = !CREW.restColumn && i === cols.length - 1;
+      c.style.display = dropped ? 'none' : '';
+      c.style.width = dropped ? '0' : rest;
+    });
+  });
 
   // group employees by location+shift
   const groups = {};
@@ -319,13 +409,27 @@ function buildReport(dateIso){
   const locTotals = {};
   LOCS.forEach(l=>locTotals[l]=0);
 
+  /* A double duty such as "G.S+C" means the person covers both shifts:
+     they are listed under each one and counted in each shift column,
+     while the headcount below counts them a single time. */
+  let headcount = 0, doubled = 0;
   EMPLOYEES.forEach((emp, idx)=>{
-    const sh = shiftArr[idx];
-    if(!sh) return;
-    if(groups[emp.loc] && groups[emp.loc][sh] !== undefined){
-      groups[emp.loc][sh].push(emp);
-    }
-    if(totals[sh] !== undefined) totals[sh]++;
+    const raw = shiftArr[idx];
+    if(!raw || raw === '-') return;
+    const shifts = String(raw).split('+').map(x=>x.trim()).filter(Boolean);
+    if(!shifts.length) return;
+    headcount++;
+    if(shifts.length > 1) doubled++;
+    shifts.forEach(sh=>{
+      const others = shifts.filter(x=>x !== sh);
+      const row = others.length ? Object.assign({}, emp, {also: others.join(' + ')}) : emp;
+      // e.g. the blasting vehicle is only at blasting for its general shift
+      const sec = (emp.sectionByShift && emp.sectionByShift[sh]) || emp.loc;
+      if(groups[sec] && groups[sec][sh] !== undefined){
+        groups[sec][sh].push(row);
+      }
+      if(totals[sh] !== undefined) totals[sh]++;
+    });
     if(locTotals[emp.loc] !== undefined) locTotals[emp.loc]++;
   });
 
@@ -335,7 +439,15 @@ function buildReport(dateIso){
   document.getElementById('qvC').textContent = totals.C;
   document.getElementById('qvG').textContent = totals['G.S'];
   document.getElementById('qvOFF').textContent = totals.OFF;
-  document.getElementById('qvTOTAL').textContent = totals.A+totals.B+totals.C+totals['G.S']+totals.OFF;
+  document.getElementById('qvTOTAL').textContent = headcount;
+
+  const note = document.getElementById('dutyNote');
+  note.textContent = doubled
+    ? '* ' + doubled + (doubled > 1 ? ' persons are' : ' person is') +
+      ' deployed on a double duty and so ' + (doubled > 1 ? 'appear' : 'appears') +
+      ' under two shifts; the shift columns count them in each, the total counts them once.'
+    : '';
+  note.style.display = doubled ? 'block' : 'none';
 
   document.getElementById('totA').textContent = totals.A;
   document.getElementById('totB').textContent = totals.B;
@@ -348,15 +460,26 @@ function buildReport(dateIso){
   LOCS.forEach(loc=>{
     rows += '<tr>';
     rows += '<td class="loc">'+loc+'</td>';
-    SHIFT_COLS.forEach(sc=>{
+    COLS.forEach(sc=>{
       const list = groups[loc][sc];
       let inner;
       if(list.length===0){
         inner = '<div style="text-align:center;color:#999;">&mdash;</div>';
       } else {
-        inner = list.map((e,i)=>
-          '<div class="line">'+(i+1)+'. '+e.name+'<br><span class="desig">('+ (e.desig||'') +')</span></div>'
-        ).join('');
+        inner = list.map((e,i)=>{
+          /* Home Guards show a phone number under the name; everyone else
+             shows their designation (see subLabel in roster-config.js). */
+          const nums = (e.phones || (e.phone ? [e.phone] : [])).map(fmtPhone).filter(Boolean);
+          const ph = nums.length ? '(Ph. No. - ' + nums.join(' / ') + ')' : '';
+          // home guards show the number in place of the designation; everyone
+          // else keeps the designation and gets the number on the line below
+          const sub = CREW.subLabel === 'phone' ? ph : (e.desig || '');
+          const tail = CREW.subLabel === 'phone' ? '' : ph;
+          return '<div class="line">'+(i+1)+'. '+e.name+
+            (e.also ? ' <span class="desig" style="color:#b35309;">(also '+e.also+')</span>' : '')+
+            (sub ? '<br><span class="desig">'+ sub +'</span>' : '')+
+            (tail ? '<br><span class="desig">'+ tail +'</span>' : '')+'</div>';
+        }).join('');
       }
       rows += '<td class="cell" contenteditable="true">'+inner+'</td>';
     });
@@ -370,13 +493,15 @@ document.getElementById('datePick').addEventListener('change', function(){
   fitReport();
 });
 setDateToToday();
+buildCrewTiles();
 buildReport(document.getElementById('datePick').value);
 window.addEventListener('load', fitReport);
 fitReport();
 
 // ---------- Export helpers ----------
 function todayTag(){
-  return document.getElementById('datePick').value;
+  const crew = CREW.id === 'dvc' ? '' : '_' + CREW.label.replace(/[^A-Za-z0-9]+/g,'_');
+  return crew + '_' + document.getElementById('datePick').value;
 }
 
 /* Shed the on-screen scaling, capture at full width, then put it back. */
@@ -451,17 +576,21 @@ function downloadXLSX(){
   aoa.push(["MANPOWER INTIMATION"]);
   aoa.push(['PLANNED MANPOWER DEPLOYMENT | DATE: '+display+' ('+day+')']);
   aoa.push([]);
-  aoa.push(['TOTAL','SHIFT A','SHIFT B','SHIFT C','G.S','OFF / REST']);
-  aoa.push([
+  const withOff = CREW.restColumn;
+  aoa.push(withOff ? ['TOTAL','SHIFT A','SHIFT B','SHIFT C','G.S','OFF / REST']
+                   : ['TOTAL','SHIFT A','SHIFT B','SHIFT C','G.S']);
+  const qv = [
     document.getElementById('qvTOTAL').textContent,
     document.getElementById('qvA').textContent,
     document.getElementById('qvB').textContent,
     document.getElementById('qvC').textContent,
-    document.getElementById('qvG').textContent,
-    document.getElementById('qvOFF').textContent
-  ]);
+    document.getElementById('qvG').textContent
+  ];
+  if (withOff) qv.push(document.getElementById('qvOFF').textContent);
+  aoa.push(qv);
   aoa.push([]);
-  aoa.push(['DEPLOYMENT LOCATION','SHIFT A','SHIFT B','SHIFT C','G.S','OFF / REST']);
+  aoa.push(withOff ? ['DEPLOYMENT LOCATION','SHIFT A','SHIFT B','SHIFT C','G.S','OFF / REST']
+                   : ['DEPLOYMENT LOCATION','SHIFT A','SHIFT B','SHIFT C','G.S']);
 
   const gridRows = document.querySelectorAll('#gridBody tr');
   gridRows.forEach(tr=>{
@@ -473,17 +602,19 @@ function downloadXLSX(){
     });
     aoa.push(rowVals);
   });
-  aoa.push([
+  const tot = [
     'TOTAL MANPOWER',
     document.getElementById('totA').textContent,
     document.getElementById('totB').textContent,
     document.getElementById('totC').textContent,
-    document.getElementById('totG').textContent,
-    document.getElementById('totOFF').textContent
-  ]);
+    document.getElementById('totG').textContent
+  ];
+  if (withOff) tot.push(document.getElementById('totOFF').textContent);
+  aoa.push(tot);
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [{wch:22},{wch:28},{wch:28},{wch:28},{wch:24},{wch:24}];
+  ws['!cols'] = withOff ? [{wch:22},{wch:28},{wch:28},{wch:28},{wch:24},{wch:24}]
+                        : [{wch:22},{wch:28},{wch:28},{wch:28},{wch:24}];
   ws['!rows'] = aoa.map((r,i)=> (i>=7 && i<7+gridRows.length) ? {hpt:110} : undefined);
   ws['!merges'] = [
     {s:{r:0,c:0},e:{r:0,c:5}},

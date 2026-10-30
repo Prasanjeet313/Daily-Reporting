@@ -1,10 +1,17 @@
 /* =====================================================================
    DVC TUBED COAL MINES - ROSTER ENGINE
    ---------------------------------------------------------------------
-   Turns roster-config.js into the two things the pages need:
+   Turns roster-config.js into the things the pages need:
 
-       RosterEngine.employees()   -> the staff list, in sheet order
-       RosterEngine.shiftsByDate() -> { "YYYY-MM-DD": [ shift per employee ] }
+       RosterEngine.employees()     -> DVC staff list, in sheet order
+       RosterEngine.shiftsByDate()  -> { "YYYY-MM-DD": [ shift per employee ] }
+       RosterEngine.sections()      -> DVC deployment locations
+
+       RosterEngine.crews()         -> [ DVC, Home Guards, Drivers ]
+       RosterEngine.crew(id)        -> one of them
+
+   Each crew exposes the same shape: id, label, reportTitle, sections,
+   employees(), shiftsByDate(), dateRange().
 
    You should not need to edit this file. All roster changes belong in
    roster-config.js.
@@ -32,66 +39,60 @@
            String(d.getDate()).padStart(2, "0");
   }
 
-  /* Every date the pages should offer: the configured range, which always
-     covers every date mentioned by a roster block. */
-  function allDates() {
-    var first = CFG.meta.dateMin, last = CFG.meta.dateMax;
-    CFG.rosterBlocks.forEach(function (b) {
+  /* ---------------------------------------------------------------
+     Shared resolver: people + roster blocks + standing duty + overrides
+     -> a staff list and a date -> shifts table.
+     --------------------------------------------------------------- */
+  function build(people, sections, blocks, standing, overrides, minDate, maxDate) {
+    var order = {};
+    sections.forEach(function (s, i) { order[s] = i; });
+
+    var staff = people.map(function (e, i) {
+      var row = {};
+      Object.keys(e).forEach(function (k) { row[k] = e[k]; });  // keep extras such as phone
+      row.id = e.id;            // Manpower_Intimation reads .id / .so
+      row.empId = e.id;         // Attendance reads .empId / .sort
+      row.so = row.sort = i + 1;
+      row.loc = e.section;
+      return row;
+    }).sort(function (a, b) {
+      var ra = order[a.loc], rb = order[b.loc];
+      if (ra === undefined) ra = 99;
+      if (rb === undefined) rb = 99;
+      return ra - rb || a.sort - b.sort;
+    }).map(function (e, i) {
+      e.so = e.sort = i + 1;        // renumber after sorting so the order is stable
+      return e;
+    });
+
+    var index = {};
+    staff.forEach(function (e, i) { index[e.id] = i; });
+
+    // every date the roster should offer
+    var first = minDate, last = maxDate;
+    blocks.forEach(function (b) {
       Object.keys(b.days).forEach(function (d) {
-        if (d < first) first = d;
-        if (d > last) last = d;
+        if (!first || d < first) first = d;
+        if (!last || d > last) last = d;
       });
     });
-    var out = [], d = first;
-    while (d <= last) { out.push(d); d = addDays(d, 1); }
-    return out;
-  }
+    var dates = [], d = first;
+    while (first && d <= last) { dates.push(d); d = addDays(d, 1); }
 
-  /* ---------------- employees ---------------- */
-  var order = {};
-  CFG.meta.sections.forEach(function (s, i) { order[s] = i; });
-
-  var EMPLOYEES = CFG.employees.map(function (e, i) {
-    return {
-      id: e.id,            // Manpower_Intimation uses .id / .so
-      empId: e.id,         // Attendance uses .empId / .sort
-      so: i + 1,
-      sort: i + 1,
-      name: e.name,
-      desig: e.desig,
-      loc: e.section
-    };
-  }).sort(function (a, b) {
-    var ra = order[a.loc], rb = order[b.loc];
-    if (ra === undefined) ra = 99;
-    if (rb === undefined) rb = 99;
-    return ra - rb || a.sort - b.sort;
-  }).map(function (e, i) {
-    e.so = e.sort = i + 1;         // renumber after sorting so the order is stable
-    return e;
-  });
-
-  var INDEX = {};
-  EMPLOYEES.forEach(function (e, i) { INDEX[e.id] = i; });
-
-  /* ---------------- shifts ---------------- */
-  function buildShifts() {
-    var dates = allDates();
     var table = {};
-    dates.forEach(function (d) {
-      table[d] = EMPLOYEES.map(function () { return ""; });
+    dates.forEach(function (dt) {
+      table[dt] = staff.map(function () { return ""; });
     });
 
     // 1. roster blocks, in order - a later block overwrites an earlier one
-    CFG.rosterBlocks.forEach(function (block) {
+    blocks.forEach(function (block) {
       var cols = block.people.map(function (id) {
-        var at = INDEX[id];
-        if (at === undefined) {
-          if (global.console) console.warn("roster block '" + block.id +
-            "' lists employee id " + id + ", who is not in employees[]");
-          return -1;
+        var at = index[id];
+        if (at === undefined && global.console) {
+          console.warn("roster block '" + block.id + "' lists id " + id +
+                       ", who is not in its people list");
         }
-        return at;
+        return at === undefined ? -1 : at;
       });
       Object.keys(block.days).forEach(function (date) {
         if (block.from && date < block.from) return;
@@ -108,11 +109,11 @@
     });
 
     // 2. standing postings (General Shift and the like)
-    (CFG.standingDuty || []).forEach(function (rule) {
+    (standing || []).forEach(function (rule) {
       var off = {};
-      (rule.weeklyOff || []).forEach(function (d) { off[d] = true; });
+      (rule.weeklyOff || []).forEach(function (x) { off[x] = true; });
       rule.ids.forEach(function (id) {
-        var at = INDEX[id];
+        var at = index[id];
         if (at === undefined) return;
         dates.forEach(function (date) {
           if (rule.from && date < rule.from) return;
@@ -123,34 +124,70 @@
     });
 
     // 3. one-off changes
-    Object.keys(CFG.overrides || {}).forEach(function (date) {
+    Object.keys(overrides || {}).forEach(function (date) {
       if (!table[date]) return;
-      var row = CFG.overrides[date];
+      var row = overrides[date];
       Object.keys(row).forEach(function (id) {
-        var at = INDEX[id];
+        var at = index[id];
         if (at !== undefined) table[date][at] = row[id];
       });
     });
 
-    return table;
+    return { staff: staff, table: table, index: index,
+             first: dates[0] || "", last: dates[dates.length - 1] || "" };
   }
 
-  var SHIFTS = buildShifts();
+  /* ---------------- the DVC roster ---------------- */
+  var DVC = build(CFG.employees, CFG.meta.sections, CFG.rosterBlocks,
+                  CFG.standingDuty, CFG.overrides, CFG.meta.dateMin, CFG.meta.dateMax);
+
+  function wrap(id, label, title, sections, built, subLabel, restColumn) {
+    return {
+      id: id,
+      label: label,
+      reportTitle: title,
+      subLabel: subLabel || "desig",   // what prints under each name
+      restColumn: restColumn !== false,// does this crew get an OFF / REST column?
+      sections: sections.slice(),
+      employees: function () { return built.staff; },
+      shiftsByDate: function () { return built.table; },
+      dateRange: function () { return { from: built.first, to: built.last }; },
+      shiftFor: function (empId, date) {
+        var at = built.index[empId];
+        return (at === undefined || !built.table[date]) ? "" : built.table[date][at];
+      }
+    };
+  }
+
+  var CREWS = [wrap("dvc", "DVC Manpower", "PLANNED MANPOWER DEPLOYMENT",
+                    CFG.meta.sections, DVC)];
+
+  (CFG.crews || []).forEach(function (c) {
+    var built = build(c.people, c.sections, c.rosterBlocks,
+                      c.standingDuty, c.overrides, null, null);
+    CREWS.push(wrap(c.id, c.label, c.reportTitle || ("PLANNED " + c.label.toUpperCase() + " DEPLOYMENT"),
+                    c.sections, built, c.subLabel, c.restColumn));
+  });
 
   /* ---------------- public surface ---------------- */
   global.RosterEngine = {
-    employees: function () { return EMPLOYEES; },
-    shiftsByDate: function () { return SHIFTS; },
+    employees: function () { return DVC.staff; },
+    shiftsByDate: function () { return DVC.table; },
     sections: function () { return CFG.meta.sections.slice(); },
     hiddenSections: function () { return (CFG.meta.hiddenInAttendance || []).slice(); },
     dateMin: function () { return CFG.meta.dateMin; },
     dateMax: function () { return CFG.meta.dateMax; },
     version: function () { return CFG.meta.version; },
 
+    crews: function () { return CREWS.slice(); },
+    crew: function (id) {
+      return CREWS.filter(function (c) { return c.id === id; })[0] || CREWS[0];
+    },
+
     /* what one person is doing on one date - handy for debugging in the console */
     shiftFor: function (empId, date) {
-      var at = INDEX[empId];
-      return (at === undefined || !SHIFTS[date]) ? "" : SHIFTS[date][at];
+      var at = DVC.index[empId];
+      return (at === undefined || !DVC.table[date]) ? "" : DVC.table[date][at];
     }
   };
 })(window);

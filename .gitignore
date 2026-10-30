@@ -1,0 +1,4 @@
+# Source material: duty rosters, office orders and manpower sheets.
+# The roster data in roster-config.js was built from these; the pages
+# never load them at runtime, so they are not deployed.
+References/
