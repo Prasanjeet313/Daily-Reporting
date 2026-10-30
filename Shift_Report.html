@@ -63,6 +63,88 @@
         .counter-widget { display: flex; align-items: center; justify-content: flex-start; gap: 5px; }
         .counter-widget input { width: 45px; text-align: center; font-weight: bold; padding: 5px; background: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 4px; pointer-events: none; }
         
+        /* ===================== report tiles ===================== */
+        .view-tiles { max-width: 1050px; margin: 0 auto 16px; display: grid;
+                      grid-template-columns: 1fr 1fr; gap: 10px; }
+        .view-tile { background: #fff; border: 1px solid #cbd5e1; border-top: 3px solid #cbd5e1;
+                     border-radius: 8px; padding: 12px 16px; cursor: pointer; text-align: left;
+                     font-family: inherit; color: #1a202c; transition: .15s;
+                     box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+        .view-tile:hover { border-color: #94a3b8; box-shadow: 0 2px 9px rgba(0,0,0,.13); }
+        .view-tile .vt-name { display: block; font-size: 15px; font-weight: 700; color: #1a365d; }
+        .view-tile .vt-meta { display: block; margin-top: 3px; font-size: 12px; color: #64748b; }
+        .view-tile.active { border-color: #1a365d; border-top-color: #1a365d; background: #f1f5fb;
+                            box-shadow: 0 3px 11px rgba(26,54,93,.2); }
+
+        /* ===================== production statement =====================
+           Only three columns, so the sheet is deliberately narrower than the
+           operations report and set in larger type. SM / ROM is one merged
+           cell down the side rather than a banner row. */
+        /* A short statement, so the sheet shrink-wraps the table: title band,
+           date/shift row and the table all share exactly one width, boxed in
+           by a single border with no stray white space. */
+        #report-container.view-production {
+            width: fit-content; min-width: 420px; max-width: 820px;
+            padding: 13px;                      /* a thin white margin, not a page border */
+            border: 1px solid #1a365d; border-radius: 5px;
+            box-shadow: 0 5px 22px rgba(0,0,0,.10);
+        }
+        /* the generic desktop-capture padding must not reopen that margin */
+        #report-container.force-desktop.view-production {
+            width: fit-content; max-width: 820px; padding: 13px;
+        }
+
+        .view-production h2 {
+            background: #1a365d; color: #fff; margin: 0;
+            padding: 11px 13px 3px; font-size: 17px; letter-spacing: .6px;
+        }
+        .view-production h4 {
+            background: #1a365d; color: #c3d4e8; margin: 0;
+            padding: 0 13px 10px; font-size: 11.5px; font-weight: 400; letter-spacing: .5px;
+        }
+        .view-production .meta-table {
+            width: 100%; margin: 0 0 11px;      /* row of space before the table */
+            font-size: 13px; border-collapse: collapse;
+        }
+        .view-production .meta-table td { padding: 6px 11px; }
+        .view-production .table-wrap { overflow: visible; }
+
+        .prod-table { font-size: 13.5px; margin-bottom: 0; }
+        .prod-table th { padding: 9px 10px; font-size: 12px; letter-spacing: .3px; }
+        .prod-table td { padding: 7px 10px; vertical-align: middle; }
+        /* every column sizes to its own content - nothing is padded out to
+           fill a width it does not need */
+        .prod-table { width: 100%; margin: 0; }
+        /* every entry in the production sheet reads centred */
+        .prod-table th, .prod-table td { text-align: center; }
+        .seam-cell .seam-pick, .rmk-cell input { text-align: center; }
+        .prod-table th, .prod-table td { white-space: nowrap; }
+        .prod-table .export-span { white-space: nowrap; }
+        .th-trips, .th-total { min-width: 92px; }
+        .th-rmk { min-width: 150px; }
+        .prod-table .th-trips, .prod-table .th-total { text-align: center; }
+        .trip-cell { text-align: center; }
+        .seam-cell .seam-pick { width: auto; max-width: 240px; font-size: 14.5px; }
+        .rmk-cell input { width: 150px; }
+        .prod-table td.dash { text-align: center; color: #94a3b8; }
+        .dash-span { display: block; text-align: center; color: #94a3b8; }
+        .prod-type-cell { text-align: center; vertical-align: middle; white-space: nowrap;
+                          background: #eef3fa; color: #1a365d;
+                          font-size: 16px; font-weight: 800; letter-spacing: 1.2px; padding: 0 12px; }
+        .prod-total-cell { text-align: center; vertical-align: middle;
+                           background: #f5f8fc; color: #1a365d;
+                           font-size: 18px; font-weight: 800; }
+        .trip-cell input { text-align: center; font-weight: 700; font-size: 14px; }
+        .rmk-cell input { font-size: 13.5px; }
+        .grand-row td { background: #1a365d; color: #fff; font-weight: 700; letter-spacing: .4px; }
+        .grand-row td.num { text-align: center; font-size: 16px; }
+        .add-row td { background: #fafcff; padding: 7px 12px; }
+        #report-container.hide-remarks .col-remarks { display: none !important; }
+        .incharge-toggle { display: none; align-items: center; gap: 7px; justify-content: center;
+                           margin: 0 auto 16px; font-size: 13px; color: #334155; cursor: pointer; }
+        .incharge-toggle input { width: auto; margin: 0; }
+        .incharge-toggle.on { display: flex; }
+
         /* ===================== responsive =====================
            The page lays out properly on a phone, a tablet and a desktop.
            For the JPG/PDF the report is temporarily forced back to its full
@@ -76,6 +158,9 @@
 
         @media (max-width: 860px) {
             body { padding: 10px; }
+            #report-container:not(.force-desktop).view-production { width: auto; min-width: 0; }
+            #report-container:not(.force-desktop).view-production .table-wrap { overflow-x: auto; }
+            #report-container:not(.force-desktop) .prod-table { min-width: 430px; }
             .toolbar-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
             .toolbar-actions .btn { width: 100%; margin: 0; padding: 12px 8px; }
             .toolbar-actions .btn-blasting { grid-column: 1 / -1; }
@@ -109,6 +194,7 @@
 
         @media (max-width: 520px) {
             .toolbar-actions { grid-template-columns: 1fr; }
+            .view-tiles { grid-template-columns: 1fr; }
             #report-container:not(.force-desktop) .seam-group { flex-wrap: wrap; }
             #report-container:not(.force-desktop) .seam-group .sector-select { flex: 1 1 120px; }
             #report-container:not(.force-desktop) .seam-group .trip-input { flex: 1 1 90px; }
@@ -118,6 +204,22 @@
     </style>
 </head>
 <body>
+
+<div class="no-print view-tiles" id="viewTiles">
+    <button type="button" class="view-tile active" data-view="operations" onclick="selectView('operations')">
+        <span class="vt-name">Daily Shift Operations Report</span>
+        <span class="vt-meta">Equipment status, stoppages, trips &amp; handover</span>
+    </button>
+    <button type="button" class="view-tile" data-view="production" onclick="selectView('production')">
+        <span class="vt-name">Daily Shift Production Report</span>
+        <span class="vt-meta">SM &amp; ROM production by seam, with trip counts</span>
+    </button>
+</div>
+
+<label class="incharge-toggle no-print" id="inchargeToggle">
+    <input type="checkbox" id="showIncharge" onchange="applyInchargeVisibility()">
+    Include Shift Incharge on the production report
+</label>
 
 <div class="no-print toolbar-actions">
     <button class="btn btn-export" onclick="downloadPDF()">⬇ Download PDF</button>
@@ -152,6 +254,8 @@
             </td>
         </tr>
     </table>
+
+    <div id="view-operations">
 
     <div class="stoppage-panel no-print">
         <h5>🛠 Log Stoppage / Breakdown</h5>
@@ -213,8 +317,10 @@
                         <select class="seam-select">
                             <option>Seam 7 Top</option><option>Seam 7 Bottom</option><option>Seam 7 Combined</option>
                             <option>Seam 5 Top</option><option>Seam 5 Bottom</option>
+                            <option>Seam 4 Top</option><option>Seam 4 Bottom</option>
                             <option>Seam 3 Top</option><option>Seam 3 Middle</option><option>Seam 3 Bottom</option>
-                            <option>Seam 2</option><option value="Other">Other (type custom)...</option>
+                            <option>Seam 2</option><option>Seam 1 Top</option>
+                            <option value="Other">Other (type custom)...</option>
                         </select>
                         <select class="sector-select">
                             <option>Sector 1</option><option>Sector 2</option><option>Sector 3</option><option>Sector 4</option>
@@ -354,11 +460,248 @@
         </tbody>
     </table>
     </div>
+
+    </div><!-- /view-operations -->
+
+    <div id="view-production" style="display:none;">
+    <div class="table-wrap">
+    <table class="ops-table prod-table">
+        <thead>
+            <tr>
+                <th class="th-type">Type</th>
+                <th class="th-seam">Seam / Face</th>
+                <th class="th-trips">No. of Trips</th>
+                <th class="th-total">Total Trips</th>
+                <th class="th-rmk col-remarks">Remarks</th>
+                <th class="no-print th-act">Row</th>
+            </tr>
+        </thead>
+
+        <tbody id="sm-body">
+            <tr class="add-row no-print">
+                <td colspan="6"><button class="btn btn-add" onclick="addProdRow('sm')">+ Add SM seam</button></td>
+            </tr>
+        </tbody>
+
+        <tbody id="rom-body">
+            <tr class="add-row no-print">
+                <td colspan="6"><button class="btn btn-add" onclick="addProdRow('rom')">+ Add ROM seam</button></td>
+            </tr>
+        </tbody>
+
+        <tfoot>
+            <tr class="grand-row">
+                <td colspan="3">TOTAL PRODUCTION (SM + ROM)</td>
+                <td class="num" id="prodGrand">0</td>
+                <td class="col-remarks"></td>
+                <td class="no-print"></td>
+            </tr>
+        </tfoot>
+    </table>
+    </div>
+    </div><!-- /view-production -->
 </div>
 
 <script>
     // Initialize Date
     document.getElementById('reportDate').valueAsDate = new Date();
+
+    /* ==============================================================
+       REPORT TILES - the date, shift and incharge block stays on top of
+       both; only the body below it changes.
+       ============================================================== */
+    let REPORT_VIEW = 'operations';
+
+    const VIEW_INFO = {
+        operations: { title: 'DAILY SHIFT REPORT - TUBED COAL MINE',
+                      subtitle: 'Operations & Equipment Status Log', file: 'Operations' },
+        production: { title: 'DAILY SHIFT PRODUCTION REPORT',
+                      subtitle: 'Tubed Coal Mines', file: 'Production' }
+    };
+
+    function selectView(view) {
+        REPORT_VIEW = view;
+        const box = document.getElementById('report-container');
+        document.getElementById('view-operations').style.display = (view === 'operations') ? '' : 'none';
+        document.getElementById('view-production').style.display = (view === 'production') ? '' : 'none';
+        document.querySelectorAll('.view-tile').forEach(t => {
+            t.classList.toggle('active', t.dataset.view === view);
+        });
+        box.classList.toggle('view-production', view === 'production');
+        box.querySelector('h2').textContent = VIEW_INFO[view].title;
+        box.querySelector('h4').textContent = VIEW_INFO[view].subtitle;
+        // logging a blasting stoppage belongs to the operations report only
+        document.querySelector('.btn-blasting').style.display = (view === 'operations') ? '' : 'none';
+        document.getElementById('inchargeToggle').classList.toggle('on', view === 'production');
+        applyInchargeVisibility();
+    }
+
+    /* The production sheet leaves the shift incharge out unless it is ticked. */
+    function applyInchargeVisibility() {
+        const row = document.querySelector('.meta-table tr:nth-child(2)');
+        const wanted = REPORT_VIEW === 'operations' || document.getElementById('showIncharge').checked;
+        row.style.display = wanted ? '' : 'none';
+    }
+
+    /* ==============================================================
+       PRODUCTION STATEMENT
+       Seams a Surface Miner is currently cutting come first in the SM
+       list; ROM also offers a local seam. Both keep a custom entry.
+       ============================================================== */
+    const SM_FACE_SEAMS = ['Seam 7 Top', 'Seam 7 Combined', 'Seam 5 Top', 'Seam 5 Bottom', 'Seam 2'];
+    const OTHER_SEAMS   = ['Seam 7 Bottom', 'Seam 4 Top', 'Seam 4 Bottom', 'Seam 3 Top',
+                           'Seam 3 Middle', 'Seam 3 Bottom', 'Seam 1 Top'];
+    const ROM_SEAMS     = ['Local Seam', 'Seam 7 Top', 'Seam 7 Bottom', 'Seam 7 Combined',
+                           'Seam 5 Top', 'Seam 5 Bottom', 'Seam 4 Top', 'Seam 4 Bottom',
+                           'Seam 3 Top', 'Seam 3 Middle', 'Seam 3 Bottom', 'Seam 2', 'Seam 1 Top'];
+
+    function opts(list) {
+        return list.map(x => '<option>' + x + '</option>').join('');
+    }
+
+    function seamSelect(kind) {
+        const custom = '<option value="Other">Custom\u2026</option>';
+        if (kind === 'sm') {
+            return '<select class="seam-pick">' +
+                   '<optgroup label="Current SM cutting faces">' + opts(SM_FACE_SEAMS) + '</optgroup>' +
+                   '<optgroup label="Other seams">' + opts(OTHER_SEAMS) + '</optgroup>' +
+                   custom + '</select>';
+        }
+        return '<select class="seam-pick">' + opts(ROM_SEAMS) + custom + '</select>';
+    }
+
+    function addProdRow(kind, seam, trips) {
+        const body = document.getElementById(kind + '-body');
+        const tr = document.createElement('tr');
+        tr.className = 'prod-row ' + kind;
+        tr.innerHTML =
+            '<td class="seam-cell">' + seamSelect(kind) + '</td>' +
+            '<td class="trip-cell"><input type="number" min="0" step="1" class="prod-trips" ' +
+                'placeholder="0" oninput="calcProduction()"></td>' +
+            '<td class="rmk-cell col-remarks"><input type="text" class="prod-remark" ' +
+                'placeholder="Optional"></td>' +
+            '<td class="no-print act-cell"><button class="btn btn-remove" title="Remove this seam" ' +
+                'onclick="removeProdRow(this)">-</button></td>';
+        body.insertBefore(tr, body.querySelector('.add-row'));
+        if (seam) tr.querySelector('.seam-pick').value = seam;
+        if (trips != null) tr.querySelector('.prod-trips').value = trips;
+        renumberProdRows();
+        calcProduction();
+        return tr;
+    }
+
+    function removeProdRow(btn) {
+        const body = btn.closest('tbody');
+        btn.closest('tr').remove();
+        if (!body.querySelectorAll('.prod-row').length) {
+            addProdRow(body.id === 'sm-body' ? 'sm' : 'rom');   // always keep one line
+        }
+        renumberProdRows();
+        calcProduction();
+    }
+
+    /* Export tidy-up for the production sheet:
+         - a seam with no trips (0 or blank) is left off the exported sheet;
+           if that empties a section, one dash row is shown in its place
+         - the merged SM / ROM and total cells are re-spanned over whatever
+           rows remain, so nothing is left dangling
+       Everything is put back by restoreProdAfterPrint().                   */
+    function prepareProdForPrint() {
+        ['sm', 'rom'].forEach(kind => {
+            const body = document.getElementById(kind + '-body');
+            const rows = Array.prototype.slice.call(body.querySelectorAll('.prod-row'));
+            let shown = [];
+
+            rows.forEach(tr => {
+                const v = parseInt(tr.querySelector('.prod-trips').value, 10);
+                if (!isNaN(v) && v > 0) { shown.push(tr); }
+                else { tr.classList.add('prod-hidden'); tr.style.display = 'none'; }
+            });
+
+            if (!shown.length) {                       // nothing produced here
+                const ph = document.createElement('tr');
+                ph.className = 'prod-row prod-placeholder';
+                ph.innerHTML = '<td class="seam-cell dash">-</td>' +
+                               '<td class="trip-cell dash">-</td>' +
+                               '<td class="rmk-cell col-remarks dash">-</td>' +
+                               '<td class="no-print"></td>';
+                body.insertBefore(ph, body.querySelector('.add-row'));
+                shown = [ph];
+            }
+
+            body.querySelectorAll('.prod-type-cell, .prod-total-cell').forEach(c => c.remove());
+
+            const label = document.createElement('td');
+            label.className = 'prod-type-cell';
+            label.rowSpan = shown.length;
+            label.textContent = (kind === 'sm') ? 'SM' : 'ROM';
+            shown[0].insertBefore(label, shown[0].firstChild);
+
+            const total = document.createElement('td');
+            total.className = 'prod-total-cell num';
+            total.rowSpan = shown.length;
+            total.id = kind + 'Total';
+            shown[0].insertBefore(total, shown[0].querySelector('.rmk-cell'));
+        });
+        calcProduction();
+        // a section with nothing produced reads as a dash, not a zero
+        ['sm', 'rom'].forEach(kind => {
+            const body = document.getElementById(kind + '-body');
+            if (body.querySelector('.prod-placeholder')) {
+                const cell = document.getElementById(kind + 'Total');
+                if (cell) { cell.textContent = '-'; cell.classList.add('dash'); }
+            }
+        });
+    }
+
+    function restoreProdAfterPrint() {
+        document.querySelectorAll('.prod-placeholder').forEach(tr => tr.remove());
+        document.querySelectorAll('.prod-hidden').forEach(tr => {
+            tr.classList.remove('prod-hidden');
+            tr.style.display = '';
+        });
+        renumberProdRows();
+        calcProduction();
+    }
+
+    /* Two merged cells run down the side of each section: the SM / ROM label
+       on the left and that section's trip total on the right, so no separate
+       total row is needed. */
+    function renumberProdRows() {
+        ['sm', 'rom'].forEach(kind => {
+            const body = document.getElementById(kind + '-body');
+            body.querySelectorAll('.prod-type-cell, .prod-total-cell').forEach(c => c.remove());
+            const rows = body.querySelectorAll('.prod-row');
+            if (!rows.length) return;
+
+            const label = document.createElement('td');
+            label.className = 'prod-type-cell';
+            label.rowSpan = rows.length;
+            label.textContent = (kind === 'sm') ? 'SM' : 'ROM';
+            rows[0].insertBefore(label, rows[0].firstChild);
+
+            const total = document.createElement('td');
+            total.className = 'prod-total-cell num';
+            total.rowSpan = rows.length;
+            total.id = kind + 'Total';
+            rows[0].insertBefore(total, rows[0].querySelector('.rmk-cell'));
+        });
+    }
+
+    function calcProduction() {
+        let grand = 0;
+        ['sm', 'rom'].forEach(kind => {
+            let sum = 0;
+            document.querySelectorAll('#' + kind + '-body .prod-trips').forEach(inp => {
+                const v = parseInt(inp.value, 10);
+                if (!isNaN(v)) sum += v;
+            });
+            const cell = document.getElementById(kind + 'Total');
+            if (cell) cell.textContent = sum;
+            grand += sum;
+        });
+        document.getElementById('prodGrand').textContent = grand;
+    }
 
     /* ==============================================================
        SHIFT INCHARGE - options and the suggestion both come from the
@@ -483,6 +826,9 @@
     buildInchargeOptions();
     toggleShiftModes(); // Run once on load
     updateShiftIncharge();
+    addProdRow('sm');
+    addProdRow('rom');
+    selectView('operations');   // the operations report is what opens first
 
     // Calculate Trips Dynamically
     function calcTrips(prefix) {
@@ -500,8 +846,10 @@
             <select class="seam-select">
                 <option>Seam 7 Top</option><option>Seam 7 Bottom</option><option>Seam 7 Combined</option>
                 <option>Seam 5 Top</option><option>Seam 5 Bottom</option>
+                <option>Seam 4 Top</option><option>Seam 4 Bottom</option>
                 <option>Seam 3 Top</option><option>Seam 3 Middle</option><option>Seam 3 Bottom</option>
-                <option>Seam 2</option><option value="Other">Other (type custom)...</option>
+                <option>Seam 2</option><option>Seam 1 Top</option>
+                <option value="Other">Other (type custom)...</option>
             </select>
             <select class="sector-select">
                 <option>Sector 1</option><option>Sector 2</option><option>Sector 3</option><option>Sector 4</option>
@@ -572,6 +920,13 @@
 
     // Print PREP: Strips borders and converts inputs/textareas to plain text
     function prepareForPrint() {
+        /* The remarks column is optional: if nothing was written in it, it is
+           left out of the exported JPG / PDF altogether. */
+        const anyRemark = Array.prototype.some.call(
+            document.querySelectorAll('.prod-remark'), i => i.value.trim() !== '');
+        document.getElementById('report-container').classList.toggle('hide-remarks', !anyRemark);
+        if (REPORT_VIEW === 'production') prepareProdForPrint();
+
         document.querySelectorAll('input, select, textarea').forEach(el => {
             if(el.type === 'button') return;
             const span = document.createElement('span');
@@ -583,6 +938,12 @@
             if (el.id === 'exc-coal' || el.id === 'exc-ob') span.innerText = el.value + ' Excavators';
             if (el.classList.contains('sector-select')) span.innerText = '· ' + el.value;
             if (el.classList.contains('trip-input')) span.innerText = el.value ? '· ' + el.value + ' trips' : '';
+
+            /* blank remarks print as a dash so the sheet reads as filled in */
+            if (el.classList.contains('prod-remark') && !el.value.trim()) {
+                span.innerText = '-';
+                span.classList.add('dash-span');
+            }
 
             /* Shift incharge prints with the designation, e.g.
                "Kumar Ankit — Dy. Manager (Mining)" */
@@ -630,6 +991,8 @@
     }
 
     function restoreAfterPrint() {
+        document.getElementById('report-container').classList.remove('hide-remarks');
+        if (REPORT_VIEW === 'production') restoreProdAfterPrint();
         document.querySelectorAll('.export-span').forEach(span => span.remove());
         document.querySelectorAll('input, select, textarea').forEach(el => el.style.display = '');
         document.querySelectorAll('.no-print').forEach(el => el.style.display = '');
@@ -651,7 +1014,7 @@
     function reportFileName(ext) {
         const d = document.getElementById('reportDate').value || 'report';
         const sh = document.getElementById('shiftSelect').value;
-        return 'Tubed_Shift_Report_' + d + '_Shift_' + sh + '.' + ext;
+        return 'Tubed_Shift_' + VIEW_INFO[REPORT_VIEW].file + '_Report_' + d + '_Shift_' + sh + '.' + ext;
     }
 
     // Export PDF
